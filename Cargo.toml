@@ -1,0 +1,18 @@
+[package]
+name = "iced-longbridge"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "showcase"
+path = "src/main.rs"
+
+[dependencies]
+iced = { version = "0.14", features = ["advanced", "canvas", "svg", "image", "lazy", "tokio"] }
+tokio = { version = "1", features = ["time", "macros"] }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
