@@ -114,15 +114,15 @@ pub fn number_input_sized<'a, Message: Clone + 'a>(
 
 fn clamp(v: f64, min: Option<f64>, max: Option<f64>) -> f64 {
     let mut v = v;
-    if let Some(m) = min {
-        if v < m {
-            v = m;
-        }
+    if let Some(m) = min
+        && v < m
+    {
+        v = m;
     }
-    if let Some(m) = max {
-        if v > m {
-            v = m;
-        }
+    if let Some(m) = max
+        && v > m
+    {
+        v = m;
     }
     v
 }

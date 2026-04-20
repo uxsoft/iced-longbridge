@@ -41,7 +41,7 @@ pub fn calendar<'a, Message: Clone + 'a>(
     let first = NaiveDate::from_ymd_opt(view_year, view_month, 1).unwrap_or(NaiveDate::MIN);
     let leading = weekday_to_idx(first.weekday());
     let days_in_month = last_day_of_month(view_year, view_month);
-    let total_cells = ((leading + days_in_month as usize + 6) / 7) * 7;
+    let total_cells = (leading + days_in_month as usize).div_ceil(7) * 7;
 
     let mut grid = column![].spacing(4);
     let mut cells_in_row: Vec<Element<Message>> = Vec::new();

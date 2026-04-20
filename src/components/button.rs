@@ -49,10 +49,8 @@ pub fn button_ex<'a, Message: 'a + Clone>(
         .height(Length::Fixed(height))
         .style(move |_, status| variant_style(&theme, variant, status, radius));
 
-    if !disabled && !loading {
-        if let Some(msg) = on_press {
-            btn = btn.on_press(msg);
-        }
+    if !disabled && !loading && let Some(msg) = on_press {
+        btn = btn.on_press(msg);
     }
 
     btn.into()

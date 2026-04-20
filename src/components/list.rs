@@ -135,10 +135,8 @@ pub fn list_item<'a, Message: Clone + 'a>(
             snap: true,
         }
     });
-    if !disabled {
-        if let Some(m) = item.on_press {
-            btn = btn.on_press(m);
-        }
+    if !disabled && let Some(m) = item.on_press {
+        btn = btn.on_press(m);
     }
     btn.into()
 }

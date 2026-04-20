@@ -71,6 +71,7 @@ where
     c.into()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn flatten<'a, Message, OnToggle, OnSelect>(
     theme: &AppTheme,
     node: &'a TreeNode,

@@ -24,6 +24,7 @@ pub struct Column<'a, T, Message> {
     pub header: String,
     pub width: Length,
     pub align: Horizontal,
+    #[allow(clippy::type_complexity)]
     pub render: Box<dyn Fn(&T) -> Element<'a, Message> + 'a>,
     pub sort_key: Option<&'static str>,
 }

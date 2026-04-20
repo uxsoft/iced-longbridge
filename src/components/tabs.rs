@@ -93,14 +93,11 @@ pub fn tabs<'a, Message: Clone + 'a>(
 ) -> Element<'a, Message> {
     let t = *theme;
     let labels: Vec<String> = tabs.iter().map(|t| t.label.clone()).collect();
-    let mut iter = tabs.into_iter();
     let mut content_el: Option<Element<'a, Message>> = None;
-    let mut i = 0usize;
-    while let Some(tab) = iter.next() {
+    for (i, tab) in tabs.into_iter().enumerate() {
         if i == selected {
             content_el = Some(tab.content);
         }
-        i += 1;
     }
     let body: Element<'a, Message> = content_el.unwrap_or_else(|| {
         Space::new().width(Length::Fill).height(Length::Fixed(0.0)).into()

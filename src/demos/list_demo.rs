@@ -52,7 +52,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     let scroll_items: Vec<ListItem<'a, Message>> = (0..80)
         .map(|n| {
             ListItem::new(format!("Item #{n:03}"))
-                .secondary(format!("A row in a scrolling list"))
+                .secondary("A row in a scrolling list".to_string())
                 .selected(selected == 100 + n)
                 .on_press(Message::ListSelected(100 + n))
         })

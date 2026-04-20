@@ -18,7 +18,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
             tree(
                 theme,
                 &state.tree_nodes,
-                |id: &str| state.tree_expanded.contains(&id.to_string()),
+                |id: &str| state.tree_expanded.contains(id),
                 state.tree_selected.as_deref(),
                 Message::TreeToggle,
                 Message::TreeSelect,

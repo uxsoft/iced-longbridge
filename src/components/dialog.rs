@@ -43,6 +43,7 @@ impl<Message> DialogAction<Message> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn dialog<'a, Message: Clone + 'a>(
     theme: &AppTheme,
     base: Element<'a, Message>,

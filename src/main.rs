@@ -76,6 +76,12 @@ pub enum Page {
     List,
     DescriptionList,
     Tree,
+    // Charts (Phase 4)
+    LineChart,
+    BarChart,
+    AreaChart,
+    PieChart,
+    CandlestickChart,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -85,6 +91,7 @@ pub enum Category {
     Layout,
     Form,
     Data,
+    Charts,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,6 +156,12 @@ impl Page {
         (Page::List, "List", Category::Data),
         (Page::DescriptionList, "Description list", Category::Data),
         (Page::Tree, "Tree", Category::Data),
+        // Charts
+        (Page::LineChart, "Line chart", Category::Charts),
+        (Page::BarChart, "Bar chart", Category::Charts),
+        (Page::AreaChart, "Area chart", Category::Charts),
+        (Page::PieChart, "Pie chart", Category::Charts),
+        (Page::CandlestickChart, "Candlestick", Category::Charts),
     ];
 }
 
@@ -659,6 +672,7 @@ fn category_label(c: Category) -> &'static str {
         Category::Layout => "Layout",
         Category::Form => "Form",
         Category::Data => "Data",
+        Category::Charts => "Charts",
     }
 }
 
@@ -765,6 +779,11 @@ fn build_content<'a>(state: &'a State) -> Element<'a, Message> {
         Page::List => demos::list_demo::view(state, t),
         Page::DescriptionList => demos::description_list_demo::view(t),
         Page::Tree => demos::tree_demo::view(state, t),
+        Page::LineChart => demos::line_chart_demo::view(t),
+        Page::BarChart => demos::bar_chart_demo::view(t),
+        Page::AreaChart => demos::area_chart_demo::view(t),
+        Page::PieChart => demos::pie_chart_demo::view(t),
+        Page::CandlestickChart => demos::candlestick_chart_demo::view(t),
     };
 
     let tt = *t;
@@ -836,6 +855,11 @@ fn page_description(page: Page) -> &'static str {
         Page::List => "Selectable rows with optional leading / trailing slots.",
         Page::DescriptionList => "Aligned term / definition pairs.",
         Page::Tree => "Recursive nested list with expand / collapse.",
+        Page::LineChart => "Multi-series linear plot with axis and legend.",
+        Page::BarChart => "Grouped bars on a band x-scale.",
+        Page::AreaChart => "Filled region below each line series.",
+        Page::PieChart => "Pie and donut variants with a legend.",
+        Page::CandlestickChart => "OHLC bodies, wicks, and a volume strip for trading data.",
     }
 }
 
