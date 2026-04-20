@@ -7,4 +7,6 @@ edition = "2024"
 iced-longbridge = { path = "../iced-longbridge" }
 iced = { version = "0.14", features = ["advanced", "canvas", "svg", "image", "lazy", "tokio"] }
 tokio = { version = "1", features = ["time", "macros"] }
-chrono = { version = "0.4", default-features = false, features = ["clock"] }
+# "wasmbind" routes chrono::Local::now() through JS Date.now() on WASM targets;
+# harmless on native.
+chrono = { version = "0.4", default-features = false, features = ["clock", "wasmbind"] }
