@@ -3,14 +3,18 @@
 //! Differences from demo-app:
 //! - No `window_size` (the browser controls the viewport).
 //! - Uses the `webgl` renderer (no Vulkan / Metal / DX12 on the web).
-//! - Tokio is replaced by the browser event loop; the `tokio` feature is not
-//!   enabled for this crate's iced dependency (see Cargo.toml).
+//! - An embedded TTF is required because cosmic-text (iced's text engine)
+//!   cannot access system or CSS fonts in a WASM context.
+
+const UBUNTU_FONT: &[u8] = include_bytes!("../fonts/Ubuntu-R.ttf");
 
 fn main() -> iced::Result {
     iced::application(demo::State::default, demo::update, demo::view)
         .title(title)
         .theme(demo::theme)
         .subscription(demo::subscription)
+        .font(UBUNTU_FONT)
+        .default_font(iced::Font::with_name("Ubuntu"))
         .run()
 }
 
