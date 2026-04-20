@@ -1,18 +1,38 @@
 //! OTP input — N single-character boxes that share a value.
+//!
+//! Each box is a focusable `text_input` with a deterministic [`Id`] derived
+//! from `id_prefix` and its index. The `on_change` callback reports the new
+//! full value along with `Some(next_index)` when a character was accepted
+//! and focus should advance, or `None` on a clear.
+//!
+//! The caller advances focus from `update` by returning the [`focus`] task.
 
 use iced::{
-    Background, Border, Element, Length, Padding,
+    Background, Border, Element, Length, Padding, Task,
+    advanced::widget::Id,
     alignment::Vertical,
-    widget::{container, row, text_input},
+    widget::{container, operation, row, text_input},
 };
 
 use crate::theme::AppTheme;
 
+/// Stable widget [`Id`] for the box at `index` in the OTP group named
+/// `id_prefix`. Pair with [`focus`] to move focus to a specific box.
+pub fn field_id(id_prefix: &str, index: usize) -> Id {
+    Id::from(format!("otp-{id_prefix}-{index}"))
+}
+
+/// Focus the OTP box at `index` in group `id_prefix`.
+pub fn focus<Message: Send + 'static>(id_prefix: &str, index: usize) -> Task<Message> {
+    operation::focus(field_id(id_prefix, index))
+}
+
 pub fn otp_input<'a, Message: Clone + 'a>(
     theme: &AppTheme,
+    id_prefix: &'a str,
     value: &str,
     length: usize,
-    on_change: impl Fn(String) -> Message + 'a + Copy,
+    on_change: impl Fn(String, Option<usize>) -> Message + 'a + Copy,
 ) -> Element<'a, Message> {
     let t = *theme;
     let mut r = row![].spacing(8).align_y(Vertical::Center);
@@ -22,18 +42,25 @@ pub fn otp_input<'a, Message: Clone + 'a>(
         let current = if ch == ' ' { String::new() } else { ch.to_string() };
         let existing = value.to_string();
         let input = text_input("", &current)
+            .id(field_id(id_prefix, i))
             .on_input(move |new_value| {
-                // Take the last typed character (paste handles itself via length)
                 let new_chars: Vec<char> = new_value.chars().collect();
                 let mut updated: Vec<char> = existing.chars().collect();
                 updated.resize(length, ' ');
-                if new_chars.is_empty() {
+                let advance = if new_chars.is_empty() {
                     updated[i] = ' ';
+                    None
                 } else {
-                    let ch = *new_chars.last().unwrap();
-                    updated[i] = ch;
-                }
-                on_change(updated.into_iter().collect::<String>().trim_end().to_string())
+                    // Typing over a filled field: the last character wins.
+                    updated[i] = *new_chars.last().unwrap();
+                    (i + 1 < length).then_some(i + 1)
+                };
+                let new_val = updated
+                    .into_iter()
+                    .collect::<String>()
+                    .trim_end()
+                    .to_string();
+                on_change(new_val, advance)
             })
             .size(20.0)
             .padding(Padding::from([6.0, 0.0]))

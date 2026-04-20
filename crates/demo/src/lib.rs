@@ -216,8 +216,8 @@ pub enum Message {
     NumberChanged(f64),
     NumberBoundedChanged(f64),
     NumberDecimalChanged(f64),
-    OtpChanged(String),
-    OtpShortChanged(String),
+    OtpChanged(String, Option<usize>),
+    OtpShortChanged(String, Option<usize>),
     CalendarSelected(NaiveDate),
     CalendarPrevMonth,
     CalendarNextMonth,
@@ -492,8 +492,18 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
         Message::NumberChanged(v) => state.number_value = v,
         Message::NumberBoundedChanged(v) => state.number_bounded = v,
         Message::NumberDecimalChanged(v) => state.number_decimal = v,
-        Message::OtpChanged(v) => state.otp_value = v,
-        Message::OtpShortChanged(v) => state.otp_short = v,
+        Message::OtpChanged(v, advance) => {
+            state.otp_value = v;
+            if let Some(i) = advance {
+                return crate::components::otp_input::focus("main", i);
+            }
+        }
+        Message::OtpShortChanged(v, advance) => {
+            state.otp_short = v;
+            if let Some(i) = advance {
+                return crate::components::otp_input::focus("short", i);
+            }
+        }
         Message::CalendarSelected(d) => {
             state.calendar_selected = Some(d);
             state.calendar_view_year = d.year();

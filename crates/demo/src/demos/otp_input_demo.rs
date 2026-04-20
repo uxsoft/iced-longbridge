@@ -8,8 +8,8 @@ use crate::{
 };
 
 pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
-    let six = otp_input(theme, &state.otp_value, 6, Message::OtpChanged);
-    let four = otp_input(theme, &state.otp_short, 4, Message::OtpShortChanged);
+    let six = otp_input(theme, "main", &state.otp_value, 6, Message::OtpChanged);
+    let four = otp_input(theme, "short", &state.otp_short, 4, Message::OtpShortChanged);
 
     column![
         section_title(theme, "6-digit code"),
