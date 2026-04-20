@@ -11,6 +11,7 @@ pub mod area;
 pub mod axis;
 pub mod bar;
 pub mod candlestick;
+pub mod interactive;
 pub mod line;
 pub mod pie;
 pub mod scale;
@@ -21,6 +22,8 @@ pub use area::{area_chart, AreaChart};
 pub use bar::{bar_chart, BarChart};
 #[allow(unused_imports)]
 pub use candlestick::{candlestick_chart, Candle, CandlestickChart};
+#[allow(unused_imports)]
+pub use interactive::{ChartHover, ChartHoverEntry, ChartState, ChartWidget};
 #[allow(unused_imports)]
 pub use line::{line_chart, LineChart, Series};
 #[allow(unused_imports)]

@@ -42,7 +42,7 @@ pub fn dropdown_button_sized<'a, Message: Clone + 'a>(
 
     let trigger = button(
         row![
-            text(label).size(text_size),
+            text(label).size(text_size).align_y(Vertical::Center),
             icon(theme, if open { IconName::ChevronUp } else { IconName::ChevronDown }, text_size),
         ]
         .spacing(8)

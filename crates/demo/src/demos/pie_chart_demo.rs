@@ -1,11 +1,8 @@
-use iced::{
-    Element, Length,
-    widget::{canvas::Canvas, column, row},
-};
+use iced::{Element, widget::{column, row}};
 
 use crate::{
     Message,
-    components::chart::{pie::PieChart, PieSlice},
+    components::chart::{pie::{donut_chart, pie_chart}, PieSlice},
     demos::common::{section_caption, section_title, vspace},
     theme::AppTheme,
 };
@@ -21,15 +18,8 @@ pub fn view<'a>(theme: &AppTheme) -> Element<'a, Message> {
         ]
     };
 
-    let pie: Element<Message> = Canvas::new(PieChart::new(theme, make_slices()))
-        .width(Length::Fill)
-        .height(Length::Fixed(260.0))
-        .into();
-
-    let donut: Element<Message> = Canvas::new(PieChart::new(theme, make_slices()).donut(0.55))
-        .width(Length::Fill)
-        .height(Length::Fixed(260.0))
-        .into();
+    let pie: Element<Message> = pie_chart(theme, make_slices());
+    let donut: Element<Message> = donut_chart(theme, make_slices());
 
     column![
         section_title(theme, "Pie / donut chart"),

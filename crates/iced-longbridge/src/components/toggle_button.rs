@@ -39,7 +39,7 @@ pub fn toggle_button_ex<'a, Message: Clone + 'a>(
     if let Some(name) = leading_icon {
         inner = inner.push(icon(theme, name, text_size));
     }
-    inner = inner.push(text(label).size(text_size));
+    inner = inner.push(text(label).size(text_size)).align_y(Vertical::Center);
 
     button(inner)
         .padding(Padding::from([0.0, px]))

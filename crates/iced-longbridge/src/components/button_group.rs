@@ -1,9 +1,7 @@
 //! Button group — segmented buttons sharing an outer border.
 
 use iced::{
-    Background, Border, Element, Padding, Shadow,
-    alignment::Vertical,
-    widget::{button, row, text},
+    Alignment, Background, Border, Element, Padding, Shadow, alignment::Vertical, widget::{button, row, text}
 };
 
 use crate::theme::{AppTheme, Size};
@@ -52,16 +50,16 @@ pub fn button_group_sized<'a, Message: Clone + 'a>(
     for (i, b) in buttons.into_iter().enumerate() {
         let is_first = i == 0;
         let is_last = i + 1 == count;
-        let active = b.active;
-        let label = b.label;
+        let content = text(b.label).size(text_size).align_y(Alignment::Center);
+
         r = r.push(
-            button(text(label).size(text_size))
+            button(content)
                 .padding(Padding::from([0.0, px]))
                 .height(iced::Length::Fixed(h))
                 .on_press(b.on_press)
                 .style(move |_, status| {
                     use button::Status::*;
-                    let (bg, fg) = if active {
+                    let (bg, fg) = if b.active {
                         (t.primary, t.primary_foreground)
                     } else {
                         match status {
