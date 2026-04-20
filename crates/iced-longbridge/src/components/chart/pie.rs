@@ -1,7 +1,7 @@
 //! Pie / donut chart.
 
 use iced::{
-    Color, Element, Length, Pixels, Point, Radians, Rectangle, Renderer, Theme,
+    Color, Element, Length, Pixels, Point, Rectangle, Renderer, Theme,
     advanced::text::Alignment as TextAlign,
     alignment::Vertical,
     mouse,
@@ -119,34 +119,25 @@ impl<Message> canvas::Program<Message> for PieChart {
                 .color
                 .unwrap_or(self.theme.chart[i % self.theme.chart.len()]);
 
+            let steps = ((frac * 96.0).ceil() as usize).max(2);
+            let step = (end - start) / steps as f32;
             let path = Path::new(|b| {
                 if inner_radius > 0.0 {
-                    let start_inner = polar(center, inner_radius, start);
-                    b.move_to(start_inner);
-                    b.line_to(polar(center, radius, start));
-                    b.arc(canvas::path::Arc {
-                        center,
-                        radius,
-                        start_angle: Radians(start),
-                        end_angle: Radians(end),
-                    });
+                    b.move_to(polar(center, radius, start));
+                    for k in 1..=steps {
+                        b.line_to(polar(center, radius, start + step * k as f32));
+                    }
                     b.line_to(polar(center, inner_radius, end));
-                    b.arc(canvas::path::Arc {
-                        center,
-                        radius: inner_radius,
-                        start_angle: Radians(end),
-                        end_angle: Radians(start),
-                    });
+                    for k in 1..=steps {
+                        b.line_to(polar(center, inner_radius, end - step * k as f32));
+                    }
                     b.close();
                 } else {
                     b.move_to(center);
                     b.line_to(polar(center, radius, start));
-                    b.arc(canvas::path::Arc {
-                        center,
-                        radius,
-                        start_angle: Radians(start),
-                        end_angle: Radians(end),
-                    });
+                    for k in 1..=steps {
+                        b.line_to(polar(center, radius, start + step * k as f32));
+                    }
                     b.close();
                 }
             });
