@@ -68,7 +68,11 @@ pub fn calendar<'a, Message: Clone + 'a>(
         }
     }
 
-    column![header, weekdays, grid].spacing(10).into()
+    // 7 day cells × 36px + 6 × 4px spacing = 276px; round up for breathing room.
+    column![header, weekdays, grid]
+        .spacing(10)
+        .width(Length::Fixed(280.0))
+        .into()
 }
 
 fn day_cell<'a, Message: Clone + 'a>(
