@@ -1,0 +1,11 @@
+# Compiled artifacts — never needed inside the image
+target/
+
+# Git history
+.git/
+.gitignore
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
