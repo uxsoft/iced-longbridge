@@ -46,6 +46,7 @@ pub fn dropdown_button_sized<'a, Message: Clone + 'a>(
             icon(theme, if open { IconName::ChevronUp } else { IconName::ChevronDown }, text_size),
         ]
         .spacing(8)
+        .height(iced::Length::Fill)
         .align_y(Vertical::Center),
     )
     .padding(Padding::from([0.0, px]))

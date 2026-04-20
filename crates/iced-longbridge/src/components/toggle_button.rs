@@ -35,11 +35,14 @@ pub fn toggle_button_ex<'a, Message: Clone + 'a>(
     let h = size.height();
     let label = label.into();
 
-    let mut inner = row![].spacing(8).align_y(Vertical::Center);
+    let mut inner = row![]
+        .spacing(8)
+        .height(iced::Length::Fill)
+        .align_y(Vertical::Center);
     if let Some(name) = leading_icon {
         inner = inner.push(icon(theme, name, text_size));
     }
-    inner = inner.push(text(label).size(text_size)).align_y(Vertical::Center);
+    inner = inner.push(text(label).size(text_size).align_y(Vertical::Center));
 
     button(inner)
         .padding(Padding::from([0.0, px]))

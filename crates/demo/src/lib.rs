@@ -51,6 +51,7 @@ pub enum Page {
     Label,
     Icon,
     Divider,
+    Markdown,
     // Layout (Phase 1)
     Tabs,
     Accordion,
@@ -131,6 +132,7 @@ impl Page {
         (Page::Label, "Label", Category::Display),
         (Page::Icon, "Icon", Category::Display),
         (Page::Divider, "Divider", Category::Display),
+        (Page::Markdown, "Markdown", Category::Display),
         // Layout
         (Page::Tabs, "Tabs", Category::Layout),
         (Page::Accordion, "Accordion", Category::Layout),
@@ -191,6 +193,7 @@ pub enum Message {
     ProgressChanged(f32),
     ProgressReset,
     LinkClicked,
+    MarkdownLinkClicked(String),
 
     // Layout (Phase 1)
     AccordionToggled(usize),
@@ -289,6 +292,10 @@ pub struct State {
     pub tree_nodes: Vec<crate::components::tree::TreeNode>,
     pub tree_expanded: std::collections::HashSet<String>,
     pub tree_selected: Option<String>,
+
+    // Demo state — markdown
+    pub markdown_items: Vec<crate::components::markdown::Item>,
+    pub markdown_last_link: String,
 }
 
 impl Default for State {
@@ -372,6 +379,11 @@ impl Default for State {
                 s
             },
             tree_selected: None,
+            markdown_items: crate::components::markdown::parse(
+                crate::demos::markdown_demo::SOURCE,
+            )
+            .collect(),
+            markdown_last_link: String::from("—"),
         }
     }
 }
@@ -445,6 +457,7 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
         }
         Message::ProgressReset => state.progress_value = 0.0,
         Message::LinkClicked => state.last_action = "Link clicked".into(),
+        Message::MarkdownLinkClicked(url) => state.markdown_last_link = url,
         Message::AccordionToggled(i) => {
             if let Some(b) = state.accordion_open.get_mut(i) {
                 *b = !*b;
@@ -737,6 +750,7 @@ fn build_content<'a>(state: &'a State) -> Element<'a, Message> {
         Page::Tag => demos::tag_demo::view(t),
         Page::Alert => demos::alert_demo::view(t),
         Page::Divider => demos::divider_demo::view(t),
+        Page::Markdown => demos::markdown_demo::view(state, t),
         Page::Progress => demos::progress_demo::view(state, t),
         Page::Slider => demos::slider_demo::view(state, t),
         Page::Spinner => demos::spinner_demo::view(state, t),
@@ -813,6 +827,7 @@ fn page_description(page: Page) -> &'static str {
         Page::Tag => "Lightweight text label.",
         Page::Alert => "Block-level contextual message.",
         Page::Divider => "Horizontal or vertical separator.",
+        Page::Markdown => "Rich text rendering for Markdown / GFM content.",
         Page::Progress => "Linear progress indicator.",
         Page::Slider => "Continuous value selector.",
         Page::Spinner => "Animated loading indicator.",

@@ -24,6 +24,7 @@ pub mod kbd;
 pub mod label;
 pub mod link;
 pub mod list;
+pub mod markdown;
 pub mod menu;
 pub mod number_input;
 pub mod otp_input;

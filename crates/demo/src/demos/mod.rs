@@ -29,6 +29,7 @@ pub mod label_demo;
 pub mod line_chart_demo;
 pub mod link_demo;
 pub mod list_demo;
+pub mod markdown_demo;
 pub mod number_input_demo;
 pub mod otp_input_demo;
 pub mod pagination_demo;
