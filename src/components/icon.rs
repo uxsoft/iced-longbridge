@@ -4,6 +4,7 @@ use iced::{Color, Element, widget::text};
 
 use crate::theme::AppTheme;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IconName {
     Check,
@@ -45,6 +46,23 @@ pub enum IconName {
     EyeOff,
     Sun,
     Moon,
+    Circle,
+    CircleFilled,
+    CheckCircle,
+    XCircle,
+    Square,
+    SquareMinus,
+    ArrowLeft,
+    ArrowRight,
+    ArrowUp,
+    ArrowDown,
+    GripVertical,
+    GripHorizontal,
+    Filter,
+    SortAsc,
+    SortDesc,
+    MoreVertical,
+    Palette,
 }
 
 impl IconName {
@@ -89,6 +107,23 @@ impl IconName {
             Self::EyeOff => "⊘",
             Self::Sun => "☀",
             Self::Moon => "☾",
+            Self::Circle => "○",
+            Self::CircleFilled => "●",
+            Self::CheckCircle => "⊙",
+            Self::XCircle => "⊗",
+            Self::Square => "▢",
+            Self::SquareMinus => "▭",
+            Self::ArrowLeft => "←",
+            Self::ArrowRight => "→",
+            Self::ArrowUp => "↑",
+            Self::ArrowDown => "↓",
+            Self::GripVertical => "⋮",
+            Self::GripHorizontal => "⋯",
+            Self::Filter => "⧩",
+            Self::SortAsc => "▲",
+            Self::SortDesc => "▼",
+            Self::MoreVertical => "⋮",
+            Self::Palette => "🎨",
         }
     }
 }
