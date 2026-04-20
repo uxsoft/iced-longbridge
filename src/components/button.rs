@@ -42,14 +42,19 @@ pub fn button_ex<'a, Message: 'a + Clone>(
         label_text
     };
 
-    let content = text(label_text).size(text_size);
+    let content = text(label_text)
+        .size(text_size)
+        .align_y(iced::alignment::Vertical::Center);
 
     let mut btn = button(content)
         .padding(Padding::from([0.0, padding_x]))
         .height(Length::Fixed(height))
         .style(move |_, status| variant_style(&theme, variant, status, radius));
 
-    if !disabled && !loading && let Some(msg) = on_press {
+    if !disabled
+        && !loading
+        && let Some(msg) = on_press
+    {
         btn = btn.on_press(msg);
     }
 
@@ -62,7 +67,15 @@ pub fn primary<'a, Message: 'a + Clone>(
     label: impl Into<String>,
     on_press: Message,
 ) -> Element<'a, Message> {
-    button_ex(theme, label, Variant::Primary, Size::Md, Some(on_press), false, false)
+    button_ex(
+        theme,
+        label,
+        Variant::Primary,
+        Size::Md,
+        Some(on_press),
+        false,
+        false,
+    )
 }
 
 #[allow(dead_code)]
@@ -71,7 +84,15 @@ pub fn secondary<'a, Message: 'a + Clone>(
     label: impl Into<String>,
     on_press: Message,
 ) -> Element<'a, Message> {
-    button_ex(theme, label, Variant::Secondary, Size::Md, Some(on_press), false, false)
+    button_ex(
+        theme,
+        label,
+        Variant::Secondary,
+        Size::Md,
+        Some(on_press),
+        false,
+        false,
+    )
 }
 
 #[allow(dead_code)]
@@ -80,7 +101,15 @@ pub fn outline<'a, Message: 'a + Clone>(
     label: impl Into<String>,
     on_press: Message,
 ) -> Element<'a, Message> {
-    button_ex(theme, label, Variant::Outline, Size::Md, Some(on_press), false, false)
+    button_ex(
+        theme,
+        label,
+        Variant::Outline,
+        Size::Md,
+        Some(on_press),
+        false,
+        false,
+    )
 }
 
 #[allow(dead_code)]
@@ -89,7 +118,15 @@ pub fn ghost<'a, Message: 'a + Clone>(
     label: impl Into<String>,
     on_press: Message,
 ) -> Element<'a, Message> {
-    button_ex(theme, label, Variant::Ghost, Size::Md, Some(on_press), false, false)
+    button_ex(
+        theme,
+        label,
+        Variant::Ghost,
+        Size::Md,
+        Some(on_press),
+        false,
+        false,
+    )
 }
 
 #[allow(dead_code)]
@@ -98,7 +135,15 @@ pub fn danger<'a, Message: 'a + Clone>(
     label: impl Into<String>,
     on_press: Message,
 ) -> Element<'a, Message> {
-    button_ex(theme, label, Variant::Danger, Size::Md, Some(on_press), false, false)
+    button_ex(
+        theme,
+        label,
+        Variant::Danger,
+        Size::Md,
+        Some(on_press),
+        false,
+        false,
+    )
 }
 
 fn variant_style(
