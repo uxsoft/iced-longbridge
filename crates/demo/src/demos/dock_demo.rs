@@ -40,7 +40,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     .spacing(4)
     .style(move |_| pane_grid::Style {
         hovered_region: pane_grid::Highlight {
-            background: iced::Background::Color(crate::theme::with_alpha(t.primary, 0.08)),
+            background: iced::Background::Color(iced_longbridge::theme::with_alpha(t.primary, 0.08)),
             border: iced::Border {
                 color: t.primary,
                 width: 1.0,
@@ -49,7 +49,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         },
         picked_split: pane_grid::Line { color: t.primary, width: 2.0 },
         hovered_split: pane_grid::Line {
-            color: crate::theme::with_alpha(t.primary, 0.5),
+            color: iced_longbridge::theme::with_alpha(t.primary, 0.5),
             width: 2.0,
         },
     });

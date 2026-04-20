@@ -1,0 +1,12 @@
+[package]
+name = "demo-app"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "showcase"
+path = "src/main.rs"
+
+[dependencies]
+demo = { path = "../demo" }
+iced = { version = "0.14", features = ["advanced", "canvas", "svg", "image", "lazy", "tokio"] }

@@ -1,0 +1,14 @@
+[package]
+name = "demo-web"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "demo-web"
+path = "src/main.rs"
+
+[dependencies]
+demo = { path = "../demo" }
+# Web builds use the webgl renderer. Tokio is not available on WASM —
+# iced falls back to the browser's event loop automatically.
+iced = { version = "0.14", features = ["advanced", "canvas", "svg", "image", "lazy", "webgl"] }

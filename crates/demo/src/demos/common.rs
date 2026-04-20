@@ -5,7 +5,7 @@ use iced::{
     widget::{column, container, text, Space},
 };
 
-use crate::theme::AppTheme;
+use iced_longbridge::theme::AppTheme;
 
 pub fn section_title<'a, Message: 'a>(theme: &AppTheme, label: impl Into<String>) -> Element<'a, Message> {
     text(label.into()).size(16.0).color(theme.foreground).into()

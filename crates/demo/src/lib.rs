@@ -1,9 +1,14 @@
-//! Iced-Longbridge — a component library and showcase modeled after
-//! <https://github.com/longbridge/gpui-component>, implemented on iced 0.14.
+//! Demo application — app state, messages, navigation and all page views.
+//!
+//! Both demo-app (native) and demo-web (WASM) depend on this crate and call
+//! [`app_builder`] to obtain a configured iced application builder.
 
-mod components;
-mod demos;
-mod theme;
+pub mod demos;
+
+// Re-export the component library modules so demo files can use `crate::components`
+// and `crate::theme` without change.
+pub use iced_longbridge::components;
+pub use iced_longbridge::theme;
 
 use std::time::Duration;
 
@@ -16,9 +21,10 @@ use iced::{
 
 use crate::{
     components::{button::{button_ex, Variant}, divider, icon::{icon, IconName}, sheet::Side as SheetSide},
-    demos::dock_demo::DockPaneData,
     theme::{AppTheme, Appearance, Size},
 };
+
+use crate::demos::dock_demo::DockPaneData;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Page {
@@ -396,24 +402,15 @@ fn build_sample_data_table() -> crate::components::data_table::DataTable {
     ])
 }
 
-pub fn main() -> iced::Result {
-    iced::application(State::default, update, view)
-        .title(|_state: &State| String::from("Iced-Longbridge Component Showcase"))
-        .theme(theme)
-        .subscription(subscription)
-        .window_size((1180.0, 760.0))
-        .run()
-}
-
-fn theme(state: &State) -> Theme {
+pub fn theme(state: &State) -> Theme {
     state.theme.iced_theme()
 }
 
-fn subscription(_state: &State) -> Subscription<Message> {
+pub fn subscription(_state: &State) -> Subscription<Message> {
     iced::time::every(Duration::from_millis(32)).map(|_| Message::Tick)
 }
 
-fn update(state: &mut State, message: Message) -> Task<Message> {
+pub fn update(state: &mut State, message: Message) -> Task<Message> {
     match message {
         Message::PageSelected(p) => state.page = p,
         Message::ThemeToggle => {
@@ -553,7 +550,7 @@ fn update(state: &mut State, message: Message) -> Task<Message> {
     Task::none()
 }
 
-fn view(state: &State) -> Element<'_, Message> {
+pub fn view(state: &State) -> Element<'_, Message> {
     let t = &state.theme;
 
     let title_bar = container(
