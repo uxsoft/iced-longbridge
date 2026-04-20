@@ -70,6 +70,12 @@ pub enum Page {
     ButtonGroup,
     ToggleButton,
     Form,
+    // Data (Phase 3)
+    Table,
+    DataTablePage,
+    List,
+    DescriptionList,
+    Tree,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,6 +84,13 @@ pub enum Category {
     Display,
     Layout,
     Form,
+    Data,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortKind {
+    Asc,
+    Desc,
 }
 
 impl Page {
@@ -130,6 +143,12 @@ impl Page {
         (Page::ButtonGroup, "Button group", Category::Form),
         (Page::ToggleButton, "Toggle button", Category::Form),
         (Page::Form, "Form", Category::Form),
+        // Data
+        (Page::Table, "Table", Category::Data),
+        (Page::DataTablePage, "Data table", Category::Data),
+        (Page::List, "List", Category::Data),
+        (Page::DescriptionList, "Description list", Category::Data),
+        (Page::Tree, "Tree", Category::Data),
     ];
 }
 
@@ -189,6 +208,12 @@ pub enum Message {
     ButtonGroupSelected(u8),
     ToggleButtonPressed(usize),
 
+    // Data (Phase 3)
+    TableSort(&'static str),
+    ListSelected(usize),
+    TreeToggle(String),
+    TreeSelect(String),
+
     NoOp,
 }
 
@@ -237,6 +262,14 @@ pub struct State {
     pub dropdown_menu_open: Option<u8>,
     pub button_group: u8,
     pub toggles: [bool; 6],
+
+    // Demo state — data
+    pub table_sort: Option<(&'static str, SortKind)>,
+    pub list_selected: usize,
+    pub data_table: crate::components::data_table::DataTable,
+    pub tree_nodes: Vec<crate::components::tree::TreeNode>,
+    pub tree_expanded: std::collections::HashSet<String>,
+    pub tree_selected: Option<String>,
 }
 
 impl Default for State {
@@ -309,8 +342,45 @@ impl Default for State {
             dropdown_menu_open: None,
             button_group: 0,
             toggles: [true, false, false, false, false, false],
+            table_sort: None,
+            list_selected: 0,
+            data_table: build_sample_data_table(),
+            tree_nodes: crate::demos::tree_demo::sample_nodes(),
+            tree_expanded: {
+                let mut s = std::collections::HashSet::new();
+                s.insert("src".to_string());
+                s.insert("src/components".to_string());
+                s
+            },
+            tree_selected: None,
         }
     }
+}
+
+fn build_sample_data_table() -> crate::components::data_table::DataTable {
+    use crate::components::data_table::DataTable;
+    DataTable::new(
+        vec!["Symbol", "Last", "Change", "Volume"],
+        vec![
+            vec!["AAPL".into(), "192.45".into(), "+1.23%".into(), "53.1M".into()],
+            vec!["MSFT".into(), "421.03".into(), "+0.41%".into(), "22.8M".into()],
+            vec!["GOOG".into(), "174.12".into(), "−0.58%".into(), "18.4M".into()],
+            vec!["AMZN".into(), "187.89".into(), "+2.04%".into(), "41.9M".into()],
+            vec!["NVDA".into(), "126.51".into(), "+3.77%".into(), "201.6M".into()],
+        ],
+    )
+    .widths(vec![
+        Length::FillPortion(2),
+        Length::FillPortion(2),
+        Length::FillPortion(2),
+        Length::FillPortion(3),
+    ])
+    .aligns(vec![
+        Horizontal::Left,
+        Horizontal::Right,
+        Horizontal::Right,
+        Horizontal::Right,
+    ])
 }
 
 pub fn main() -> iced::Result {
@@ -448,6 +518,23 @@ fn update(state: &mut State, message: Message) -> Task<Message> {
                 *b = !*b;
             }
         }
+        Message::TableSort(key) => {
+            state.table_sort = match state.table_sort {
+                Some((k, SortKind::Asc)) if k == key => Some((key, SortKind::Desc)),
+                Some((k, SortKind::Desc)) if k == key => None,
+                _ => Some((key, SortKind::Asc)),
+            };
+        }
+        Message::ListSelected(i) => {
+            state.list_selected = i;
+            state.last_action = format!("List: {i}");
+        }
+        Message::TreeToggle(id) => {
+            if !state.tree_expanded.remove(&id) {
+                state.tree_expanded.insert(id);
+            }
+        }
+        Message::TreeSelect(id) => state.tree_selected = Some(id),
         Message::NoOp => {}
     }
     Task::none()
@@ -571,6 +658,7 @@ fn category_label(c: Category) -> &'static str {
         Category::Display => "Display",
         Category::Layout => "Layout",
         Category::Form => "Form",
+        Category::Data => "Data",
     }
 }
 
@@ -672,6 +760,11 @@ fn build_content<'a>(state: &'a State) -> Element<'a, Message> {
         Page::ButtonGroup => demos::button_group_demo::view(state, t),
         Page::ToggleButton => demos::toggle_button_demo::view(state, t),
         Page::Form => demos::form_demo::view(state, t),
+        Page::Table => demos::table_demo::view(state, t),
+        Page::DataTablePage => demos::data_table_demo::view(state, t),
+        Page::List => demos::list_demo::view(state, t),
+        Page::DescriptionList => demos::description_list_demo::view(t),
+        Page::Tree => demos::tree_demo::view(state, t),
     };
 
     let tt = *t;
@@ -738,6 +831,11 @@ fn page_description(page: Page) -> &'static str {
         Page::ButtonGroup => "Segmented buttons sharing an outer border.",
         Page::ToggleButton => "Stateful button that persists a pressed look.",
         Page::Form => "label / input / help-text layout helper.",
+        Page::Table => "Column-and-row layout with typed cells and sorting.",
+        Page::DataTablePage => "Wrapper over table for simple string-only data.",
+        Page::List => "Selectable rows with optional leading / trailing slots.",
+        Page::DescriptionList => "Aligned term / definition pairs.",
+        Page::Tree => "Recursive nested list with expand / collapse.",
     }
 }
 
