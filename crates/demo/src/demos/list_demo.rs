@@ -5,7 +5,7 @@ use crate::{
     components::{
         badge::{badge, BadgeVariant},
         icon::IconName,
-        list::{list, virtual_list, ListItem},
+        list::{list, ListItem},
     },
     demos::common::{section_caption, section_title, vspace},
     theme::AppTheme,
@@ -64,7 +64,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         row![
             container(list(theme, items)).width(Length::FillPortion(1)),
             container(
-                container(virtual_list(theme, scroll_items))
+                container(list(theme, scroll_items))
                     .max_height(320)
             )
             .width(Length::FillPortion(1)),

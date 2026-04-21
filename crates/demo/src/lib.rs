@@ -12,7 +12,7 @@ pub use iced_longbridge::theme;
 
 use std::time::Duration;
 
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, NaiveDate, Timelike};
 use iced::{
     Background, Border, Element, Length, Padding, Shadow, Subscription, Task, Theme,
     alignment::{Horizontal, Vertical},
@@ -52,6 +52,10 @@ pub enum Page {
     Icon,
     Divider,
     Markdown,
+    Html,
+    CodeEditor,
+    TextView,
+    Notification,
     // Layout (Phase 1)
     Tabs,
     Accordion,
@@ -71,6 +75,8 @@ pub enum Page {
     OtpInput,
     Calendar,
     DatePicker,
+    TimePicker,
+    ColorPicker,
     HoverCard,
     Sheet,
     DropdownMenu,
@@ -81,6 +87,7 @@ pub enum Page {
     Table,
     DataTablePage,
     List,
+    VirtualList,
     DescriptionList,
     Tree,
     // Charts (Phase 4)
@@ -133,6 +140,10 @@ impl Page {
         (Page::Icon, "Icon", Category::Display),
         (Page::Divider, "Divider", Category::Display),
         (Page::Markdown, "Markdown", Category::Display),
+        (Page::Html, "HTML", Category::Display),
+        (Page::CodeEditor, "Code editor", Category::Display),
+        (Page::TextView, "Text view", Category::Display),
+        (Page::Notification, "Notification", Category::Display),
         // Layout
         (Page::Tabs, "Tabs", Category::Layout),
         (Page::Accordion, "Accordion", Category::Layout),
@@ -152,6 +163,8 @@ impl Page {
         (Page::OtpInput, "OTP input", Category::Form),
         (Page::Calendar, "Calendar", Category::Form),
         (Page::DatePicker, "Date picker", Category::Form),
+        (Page::TimePicker, "Time picker", Category::Form),
+        (Page::ColorPicker, "Color picker", Category::Form),
         (Page::HoverCard, "Hover card", Category::Form),
         (Page::Sheet, "Sheet", Category::Form),
         (Page::DropdownMenu, "Dropdown menu", Category::Form),
@@ -162,6 +175,7 @@ impl Page {
         (Page::Table, "Table", Category::Data),
         (Page::DataTablePage, "Data table", Category::Data),
         (Page::List, "List", Category::Data),
+        (Page::VirtualList, "Virtual list", Category::Data),
         (Page::DescriptionList, "Description list", Category::Data),
         (Page::Tree, "Tree", Category::Data),
         // Charts
@@ -236,6 +250,23 @@ pub enum Message {
     TreeToggle(String),
     TreeSelect(String),
 
+    // New widgets
+    ColorPickerToggle,
+    ColorPickerChanged(iced::Color),
+    ColorPickerHexChanged(String),
+    NotificationPush(crate::components::notification::NotificationKind),
+    NotificationDismiss(u64),
+    TimePickerToggle,
+    TimePickerHourChanged(u32),
+    TimePickerMinuteChanged(u32),
+    TimePickerSecondChanged(u32),
+    VirtualListScrolled(iced::widget::scrollable::Viewport),
+    VirtualListSelected(usize),
+    TextViewAction(iced::widget::text_editor::Action),
+    HtmlLinkClicked(String),
+    CodeEditorAction(iced::widget::text_editor::Action),
+    CodeEditorLanguage(crate::components::code_editor::Language),
+
     NoOp,
 }
 
@@ -296,6 +327,22 @@ pub struct State {
     // Demo state — markdown
     pub markdown_items: Vec<crate::components::markdown::Item>,
     pub markdown_last_link: String,
+
+    // Demo state — new widgets
+    pub color_picker_open: bool,
+    pub color_value: iced::Color,
+    pub color_hex: String,
+    pub notifications: crate::components::notification::NotificationList,
+    pub next_notification_id: u64,
+    pub time_picker_open: bool,
+    pub time_value: chrono::NaiveTime,
+    pub virtual_list_items: Vec<String>,
+    pub virtual_list_offset: f32,
+    pub virtual_list_selected: usize,
+    pub text_view_content: iced::widget::text_editor::Content,
+    pub html_items: Vec<crate::components::markdown::Item>,
+    pub code_editor_content: iced::widget::text_editor::Content,
+    pub code_editor_language: crate::components::code_editor::Language,
 }
 
 impl Default for State {
@@ -384,6 +431,26 @@ impl Default for State {
             )
             .collect(),
             markdown_last_link: String::from("—"),
+            color_picker_open: false,
+            color_value: iced::Color { r: 0.23, g: 0.51, b: 0.96, a: 1.0 },
+            color_hex: String::from("#3B82F6"),
+            notifications: crate::components::notification::NotificationList::new(),
+            next_notification_id: 1,
+            time_picker_open: false,
+            time_value: chrono::NaiveTime::from_hms_opt(9, 30, 0).unwrap(),
+            virtual_list_items: (0..10_000)
+                .map(|i| format!("Row {i:05} — virtualized so only visible rows render"))
+                .collect(),
+            virtual_list_offset: 0.0,
+            virtual_list_selected: 0,
+            text_view_content: iced::widget::text_editor::Content::with_text(
+                crate::demos::text_view_demo::SAMPLE,
+            ),
+            html_items: crate::components::html::parse(crate::demos::html_demo::SAMPLE),
+            code_editor_content: iced::widget::text_editor::Content::with_text(
+                crate::demos::code_editor_demo::SAMPLE_RUST,
+            ),
+            code_editor_language: crate::components::code_editor::Language::Rust,
         }
     }
 }
@@ -434,6 +501,7 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
         Message::Tick => {
             state.tick_rotation =
                 (state.tick_rotation + 0.08) % (std::f32::consts::TAU);
+            state.notifications.tick(32);
         }
         Message::ButtonPressed(s) => state.last_action = format!("Pressed: {s}"),
         Message::InputChanged(s) => state.input_value = s,
@@ -568,6 +636,59 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
             }
         }
         Message::TreeSelect(id) => state.tree_selected = Some(id),
+        Message::ColorPickerToggle => state.color_picker_open = !state.color_picker_open,
+        Message::ColorPickerChanged(c) => {
+            state.color_value = c;
+            state.color_hex = crate::components::color_picker::format_hex(c);
+        }
+        Message::ColorPickerHexChanged(s) => {
+            if let Some(c) = crate::components::color_picker::parse_hex(&s) {
+                state.color_value = c;
+            }
+            state.color_hex = s;
+        }
+        Message::NotificationPush(kind) => {
+            use crate::components::notification::{Notification, NotificationKind};
+            let id = state.next_notification_id;
+            state.next_notification_id += 1;
+            let (title, message) = match kind {
+                NotificationKind::Info => ("Heads up", "An informational update."),
+                NotificationKind::Success => ("Saved", "Your changes have been saved."),
+                NotificationKind::Warning => ("Low disk", "Running low on free space."),
+                NotificationKind::Error => ("Failed", "Couldn't reach the server."),
+            };
+            state
+                .notifications
+                .push(Notification::new(id, kind, title).message(message));
+        }
+        Message::NotificationDismiss(id) => state.notifications.dismiss(id),
+        Message::TimePickerToggle => state.time_picker_open = !state.time_picker_open,
+        Message::TimePickerHourChanged(h) => {
+            if let Some(t) = state.time_value.with_hour(h) {
+                state.time_value = t;
+            }
+        }
+        Message::TimePickerMinuteChanged(m) => {
+            if let Some(t) = state.time_value.with_minute(m) {
+                state.time_value = t;
+            }
+        }
+        Message::TimePickerSecondChanged(s) => {
+            if let Some(t) = state.time_value.with_second(s) {
+                state.time_value = t;
+            }
+        }
+        Message::VirtualListScrolled(viewport) => {
+            state.virtual_list_offset = viewport.absolute_offset().y;
+        }
+        Message::VirtualListSelected(i) => {
+            state.virtual_list_selected = i;
+            state.last_action = format!("Virtual row: {i}");
+        }
+        Message::TextViewAction(action) => state.text_view_content.perform(action),
+        Message::HtmlLinkClicked(url) => state.last_action = format!("HTML link: {url}"),
+        Message::CodeEditorAction(action) => state.code_editor_content.perform(action),
+        Message::CodeEditorLanguage(lang) => state.code_editor_language = lang,
         Message::NoOp => {}
     }
     Task::none()
@@ -805,6 +926,13 @@ fn build_content<'a>(state: &'a State) -> Element<'a, Message> {
         Page::AreaChart => demos::area_chart_demo::view(t),
         Page::PieChart => demos::pie_chart_demo::view(t),
         Page::CandlestickChart => demos::candlestick_chart_demo::view(t),
+        Page::Html => demos::html_demo::view(state, t),
+        Page::CodeEditor => demos::code_editor_demo::view(state, t),
+        Page::TextView => demos::text_view_demo::view(state, t),
+        Page::Notification => demos::notification_demo::view(state, t),
+        Page::TimePicker => demos::time_picker_demo::view(state, t),
+        Page::ColorPicker => demos::color_picker_demo::view(state, t),
+        Page::VirtualList => demos::virtual_list_demo::view(state, t),
     };
 
     let tt = *t;
@@ -882,6 +1010,13 @@ fn page_description(page: Page) -> &'static str {
         Page::AreaChart => "Filled region below each line series.",
         Page::PieChart => "Pie and donut variants with a legend.",
         Page::CandlestickChart => "OHLC bodies, wicks, and a volume strip for trading data.",
+        Page::Html => "Lightweight HTML subset rendered through the Markdown pipeline.",
+        Page::CodeEditor => "Monospaced text editor with syntect-powered syntax highlighting.",
+        Page::TextView => "Read-only selectable text view.",
+        Page::Notification => "Toast stack with info / success / warning / error variants.",
+        Page::TimePicker => "Hour / minute / second selector with a popover trigger.",
+        Page::ColorPicker => "Palette, HSLA sliders, and hex input in an anchored panel.",
+        Page::VirtualList => "Viewport-virtualised scrolling list for huge datasets.",
     }
 }
 

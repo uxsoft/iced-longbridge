@@ -167,12 +167,3 @@ pub fn list<'a, Message: Clone + 'a>(
         .into()
 }
 
-/// Virtual list fallback — currently renders all rows.
-/// A true viewport-aware impl requires a custom `Widget`; for <200 rows the
-/// overhead is negligible.
-pub fn virtual_list<'a, Message: Clone + 'a>(
-    theme: &AppTheme,
-    items: Vec<ListItem<'a, Message>>,
-) -> Element<'a, Message> {
-    list(theme, items)
-}

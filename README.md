@@ -13,16 +13,16 @@ types — all usable in both native desktop and WebAssembly applications.
 Button · Input · Number input · OTP input · Checkbox · Radio · Switch · Slider · Rating
 
 ### Display
-Badge · Tag · Alert · Progress · Spinner · Skeleton · Tooltip · Avatar · Link · Kbd · Label · Icon · Divider
+Badge · Tag · Alert · Progress · Spinner · Skeleton · Tooltip · Avatar · Link · Kbd · Label · Icon · Divider · Markdown · HTML · Code editor · Text view · Notification
 
 ### Layout
 Tabs · Accordion · Collapsible · Breadcrumb · Pagination · Stepper · Group box · Title bar · Dialog · Resizable · Dock · Sidebar
 
 ### Form & Overlay
-Select · Calendar · Date picker · Hover card · Sheet · Dropdown menu · Button group · Toggle button · Form · Popover · Menu
+Select · Calendar · Date picker · Time picker · Color picker · Hover card · Sheet · Dropdown menu · Button group · Toggle button · Form · Popover · Menu
 
 ### Data
-Table · Data table · List · Description list · Tree
+Table · Data table · List · Virtual list · Description list · Tree
 
 ### Charts
 Line · Bar · Area · Pie · Candlestick (OHLC)
