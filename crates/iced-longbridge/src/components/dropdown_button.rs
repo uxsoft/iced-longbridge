@@ -10,7 +10,7 @@ use crate::{
     components::{
         icon::{icon, IconName},
         menu::{menu, Item},
-        popover::popover,
+        popover::popover_dismissable,
     },
     theme::{AppTheme, Size},
 };
@@ -51,7 +51,7 @@ pub fn dropdown_button_sized<'a, Message: Clone + 'a>(
     )
     .padding(Padding::from([0.0, px]))
     .height(iced::Length::Fixed(h))
-    .on_press(on_toggle)
+    .on_press(on_toggle.clone())
     .style(move |_, status| {
         use button::Status::*;
         let (bg, fg) = match status {
@@ -73,5 +73,5 @@ pub fn dropdown_button_sized<'a, Message: Clone + 'a>(
     });
 
     let menu_panel = open.then(|| menu(theme, items));
-    popover(theme, trigger.into(), menu_panel)
+    popover_dismissable(theme, trigger.into(), menu_panel, on_toggle)
 }

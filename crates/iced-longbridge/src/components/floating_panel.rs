@@ -1,11 +1,10 @@
 //! Floating panel — a trigger with an optional panel that renders as a true
-//! overlay below it.
+//! overlay anchored below (or above, if space is tight) the trigger.
 //!
-//! Unlike [`popover`](super::popover), which renders the panel inline in a
-//! column (and therefore pushes surrounding layout), this widget returns the
-//! panel via `Widget::overlay()` so it floats over other content instead of
-//! claiming vertical space. Used by [`menu_bar`](super::menu_bar) so opening
-//! one menu doesn't shift the other triggers down.
+//! The panel is returned via `Widget::overlay()` so it floats over other
+//! content instead of claiming layout space. Used directly by
+//! [`menu_bar`](super::menu_bar) and through [`popover`](super::popover) by
+//! the dropdown button, color picker, time picker, and date picker.
 
 use iced::{
     Element, Event, Length, Rectangle, Size, Vector,
@@ -29,6 +28,7 @@ where
     gap: f32,
     align: Horizontal,
     flip: bool,
+    on_dismiss: Option<Message>,
 }
 
 impl<'a, Message, Theme, Renderer> FloatingPanel<'a, Message, Theme, Renderer>
@@ -45,6 +45,7 @@ where
             gap: 4.0,
             align: Horizontal::Left,
             flip: true,
+            on_dismiss: None,
         }
     }
 
@@ -66,11 +67,20 @@ where
         self.flip = flip;
         self
     }
+
+    /// Fire `message` when the user presses the mouse outside the panel.
+    /// Typical use: pass the same message that toggles the panel open, so a
+    /// click anywhere else closes it.
+    pub fn on_dismiss(mut self, message: Message) -> Self {
+        self.on_dismiss = Some(message);
+        self
+    }
 }
 
 impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for FloatingPanel<'_, Message, Theme, Renderer>
 where
+    Message: Clone,
     Renderer: iced::advanced::Renderer,
 {
     fn children(&self) -> Vec<Tree> {
@@ -212,6 +222,7 @@ where
                     gap: self.gap,
                     align: self.align,
                     flip: self.flip,
+                    on_dismiss: self.on_dismiss.as_ref(),
                 })))
             }
             _ => None,
@@ -230,7 +241,7 @@ where
 impl<'a, Message, Theme, Renderer> From<FloatingPanel<'a, Message, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
-    Message: 'a,
+    Message: Clone + 'a,
     Theme: 'a,
     Renderer: iced::advanced::Renderer + 'a,
 {
@@ -249,11 +260,13 @@ where
     gap: f32,
     align: Horizontal,
     flip: bool,
+    on_dismiss: Option<&'b Message>,
 }
 
 impl<Message, Theme, Renderer> Overlay<Message, Theme, Renderer>
     for PanelOverlay<'_, '_, Message, Theme, Renderer>
 where
+    Message: Clone,
     Renderer: iced::advanced::Renderer,
 {
     fn layout(&mut self, renderer: &Renderer, bounds: Size) -> layout::Node {
@@ -279,12 +292,13 @@ where
         let max_x = (bounds.width - panel_size.width).max(0.0);
         let x = x.clamp(0.0, max_x);
 
+        // Flip above only when the above position fits entirely; otherwise
+        // keep the panel below so it never overlaps the trigger. If it's
+        // taller than the viewport, the overlay will clip at the edge.
         if self.flip && y + panel_size.height > bounds.height {
             let flipped = self.trigger_bounds.y - self.gap - panel_size.height;
             if flipped >= 0.0 {
                 y = flipped;
-            } else {
-                y = (bounds.height - panel_size.height).max(0.0);
             }
         }
 
@@ -324,6 +338,20 @@ where
         self.panel.as_widget_mut().update(
             self.tree, event, layout, cursor, renderer, clipboard, shell, &viewport,
         );
+
+        // Dismiss on a mouse press that lands outside both the panel and the
+        // trigger. Excluding the trigger avoids double-toggling when the
+        // trigger button itself is used to close the panel.
+        if let (Some(dismiss), Event::Mouse(mouse::Event::ButtonPressed(_))) =
+            (self.on_dismiss, event)
+        {
+            let hit = cursor.position().is_some_and(|p| {
+                layout.bounds().contains(p) || self.trigger_bounds.contains(p)
+            });
+            if !hit {
+                shell.publish(dismiss.clone());
+            }
+        }
     }
 
     fn mouse_interaction(
