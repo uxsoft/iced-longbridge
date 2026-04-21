@@ -1,17 +1,16 @@
-//! Popover — trigger that reveals a floating panel.
+//! Popover — trigger that reveals a floating panel anchored to it.
 //!
-//! Positioning note: iced 0.14 doesn't expose per-widget bounds at the
-//! composition layer, so the popover renders inline directly below its
-//! trigger rather than floating freely. The effect is equivalent for
-//! trigger-anchored dropdowns, date pickers, and menus.
+//! The panel is returned through [`FloatingPanel`]'s `Widget::overlay()` so it
+//! floats above siblings instead of pushing them down. Used by the dropdown
+//! button, time/date pickers, and the color picker.
 
 use iced::{
-    Background, Border, Color, Element, Length, Padding, Shadow, Vector,
+    Background, Border, Element, Padding, Shadow,
     alignment::Horizontal,
-    widget::{column, container},
+    widget::container,
 };
 
-use crate::theme::AppTheme;
+use crate::{components::floating_panel::FloatingPanel, theme::AppTheme};
 
 pub fn popover<'a, Message: 'a>(
     theme: &AppTheme,
@@ -28,9 +27,8 @@ pub fn popover_aligned<'a, Message: 'a>(
     align: Horizontal,
 ) -> Element<'a, Message> {
     let t = *theme;
-    let mut col = column![trigger].spacing(4);
-    if let Some(p) = panel {
-        let wrapped = container(p)
+    let wrapped = panel.map(|p| {
+        container(p)
             .padding(Padding::from([6.0, 8.0]))
             .style(move |_| container::Style {
                 background: Some(Background::Color(t.popover)),
@@ -40,17 +38,11 @@ pub fn popover_aligned<'a, Message: 'a>(
                     width: 1.0,
                     radius: 8.0.into(),
                 },
-                shadow: Shadow {
-                    color: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-                    offset: Vector::new(0.0, 4.0),
-                    blur_radius: 12.0,
-                },
+                shadow: Shadow::default(),
                 snap: true,
-            });
-        col = col.push(wrapped);
-    }
-    container(col)
-        .width(Length::Shrink)
-        .align_x(align)
-        .into()
+            })
+            .into()
+    });
+
+    FloatingPanel::new(trigger, wrapped).align(align).into()
 }

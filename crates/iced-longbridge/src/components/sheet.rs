@@ -1,7 +1,7 @@
 //! Sheet — slide-in side panel over a backdrop.
 
 use iced::{
-    Background, Border, Color, Element, Length, Padding, Shadow, Vector,
+    Background, Border, Color, Element, Length, Padding, Shadow,
     alignment::{Horizontal, Vertical},
     widget::{container, mouse_area, stack, Space},
 };
@@ -54,11 +54,7 @@ pub fn sheet<'a, Message: Clone + 'a>(
                 width: 1.0,
                 radius: 0.0.into(),
             },
-            shadow: Shadow {
-                color: Color::from_rgba(0.0, 0.0, 0.0, 0.35),
-                offset: Vector::new(0.0, 0.0),
-                blur_radius: 32.0,
-            },
+            shadow: Shadow::default(),
             snap: true,
         });
 

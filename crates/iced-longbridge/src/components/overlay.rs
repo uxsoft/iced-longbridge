@@ -85,11 +85,7 @@ pub fn panel<'a, Message: 'a>(
                 width: 1.0,
                 radius: 10.0.into(),
             },
-            shadow: Shadow {
-                color: Color::from_rgba(0.0, 0.0, 0.0, 0.35),
-                offset: iced::Vector::new(0.0, 8.0),
-                blur_radius: 24.0,
-            },
+            shadow: Shadow::default(),
             snap: true,
         })
         .into()

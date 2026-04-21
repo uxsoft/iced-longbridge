@@ -6,7 +6,7 @@
 //! Collecting those shapes here keeps component files focused on layout.
 
 use iced::{
-    Background, Border, Color, Shadow, Vector,
+    Background, Border, Color, Shadow,
     widget::{button, container},
 };
 
@@ -65,7 +65,7 @@ pub fn button_style(
 }
 
 /// Floating panel style used by popovers, toasts, and dialogs. Background is
-/// the theme's `popover` surface, with a soft drop shadow.
+/// the theme's `popover` surface.
 pub fn popover_container(theme: &AppTheme, radius: f32) -> container::Style {
     container::Style {
         background: Some(Background::Color(theme.popover)),
@@ -75,11 +75,7 @@ pub fn popover_container(theme: &AppTheme, radius: f32) -> container::Style {
             width: 1.0,
             radius: radius.into(),
         },
-        shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.0), // 0.25),
-            offset: Vector::new(0.0, 6.0),
-            blur_radius: 18.0,
-        },
+        shadow: Shadow::default(),
         snap: true,
     }
 }
@@ -107,7 +103,7 @@ pub fn simple_container(
     }
 }
 
-/// Small floating panel used by tooltips (subtler drop shadow than a popover).
+/// Small floating panel used by tooltips.
 pub fn tooltip_container(theme: &AppTheme, radius: f32) -> container::Style {
     container::Style {
         background: Some(Background::Color(theme.popover)),
@@ -117,11 +113,7 @@ pub fn tooltip_container(theme: &AppTheme, radius: f32) -> container::Style {
             width: 1.0,
             radius: radius.into(),
         },
-        shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.0), //0.15),
-            offset: Vector::new(0.0, 2.0),
-            blur_radius: 6.0,
-        },
+        shadow: Shadow::default(),
         snap: true,
     }
 }
@@ -137,11 +129,7 @@ pub fn popover_container_accent(theme: &AppTheme, accent: Color, radius: f32) ->
             width: 1.0,
             radius: radius.into(),
         },
-        shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.0), // 0.25),
-            offset: Vector::new(0.0, 4.0),
-            blur_radius: 14.0,
-        },
+        shadow: Shadow::default(),
         snap: true,
     }
 }

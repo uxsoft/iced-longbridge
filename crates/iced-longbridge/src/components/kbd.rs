@@ -22,11 +22,7 @@ pub fn kbd<'a, Message: 'a>(
                 width: 1.0,
                 radius: 4.0.into(),
             },
-            shadow: Shadow {
-                color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.05),
-                offset: iced::Vector::new(0.0, 1.0),
-                blur_radius: 0.0,
-            },
+            shadow: Shadow::default(),
             snap: true,
         })
         .into()
