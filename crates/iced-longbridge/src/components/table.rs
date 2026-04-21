@@ -2,11 +2,28 @@
 //!
 //! Build columns with [`Column::new`] and render rows from any `Vec<T>` via
 //! [`table`]. Header is a sticky row; body is scrollable.
+//!
+//! ## Resizable columns
+//!
+//! Pass a [`ResizeHandlers`] in [`TableOptions::resize`] to enable drag-to-
+//! resize on the boundary between adjacent columns. The caller owns the
+//! per-column width state (as `Length::Fixed` on each [`Column`]) and updates
+//! it from the emitted messages:
+//!
+//! - `on_grab(i)` fires when the user presses on the divider *after* column
+//!   `i` — the caller should record `dragging = Some(i)`.
+//! - `on_drag(Point)` fires continuously while the user moves the mouse; the
+//!   caller converts the cursor-x delta to a width change.
+//! - `on_release` fires on mouse-up; the caller clears `dragging`.
+//!
+//! While `dragging.is_some()` the table wraps itself in a full-area mouse
+//! overlay so the drag keeps working even when the cursor wanders off the
+//! handle.
 
 use iced::{
     Background, Border, Element, Length, Padding, Shadow,
     alignment::{Horizontal, Vertical},
-    widget::{column, container, row, scrollable, text, Space},
+    widget::{column, container, mouse_area, row, scrollable, stack, text, Space},
 };
 
 use crate::{
@@ -17,6 +34,11 @@ use crate::{
 /// Width of iced's default vertical scrollbar (matches `scrollable::Scrollbar`
 /// `width` + `margin`). Kept in sync so header/body columns stay aligned.
 const SCROLLBAR_WIDTH: f32 = 10.0;
+
+/// Width of the column-boundary strip in the header and body. When resize is
+/// enabled, the header strip is a mouse_area; the body strip is a plain gap
+/// so header/body columns stay aligned.
+const DIVIDER_WIDTH: f32 = 4.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortDir {
@@ -63,11 +85,25 @@ impl<'a, T, Message> Column<'a, T, Message> {
     }
 }
 
+/// Drag-to-resize wiring for column boundaries. See module docs for the
+/// lifecycle.
+pub struct ResizeHandlers<'a, Message> {
+    /// Mouse-down on the divider between column `i` and `i + 1`.
+    pub on_grab: Box<dyn Fn(usize) -> Message + 'a>,
+    /// Mouse moved while the caller is in a dragging state.
+    pub on_drag: Box<dyn Fn(iced::Point) -> Message + 'a>,
+    /// Mouse released (while dragging).
+    pub on_release: Message,
+    /// Index of the column currently being dragged, or `None` when idle.
+    pub dragging: Option<usize>,
+}
+
 pub struct TableOptions<'a, Message> {
     pub sort: Option<(&'static str, SortDir)>,
     pub on_sort: Option<Box<dyn Fn(&'static str) -> Message + 'a>>,
     pub striped: bool,
     pub row_height: f32,
+    pub resize: Option<ResizeHandlers<'a, Message>>,
 }
 
 impl<'a, Message> Default for TableOptions<'a, Message> {
@@ -77,6 +113,7 @@ impl<'a, Message> Default for TableOptions<'a, Message> {
             on_sort: None,
             striped: true,
             row_height: 40.0,
+            resize: None,
         }
     }
 }
@@ -102,11 +139,13 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
         on_sort,
         striped,
         row_height,
+        resize,
     } = options;
+    let col_count = columns.len();
 
     // Header row.
     let mut header = row![].spacing(0);
-    for col in &columns {
+    for (i, col) in columns.iter().enumerate() {
         let is_sorted = sort.map(|(k, _)| Some(k) == col.sort_key).unwrap_or(false);
         let sort_dir = if is_sorted { sort.map(|(_, d)| d) } else { None };
 
@@ -159,6 +198,10 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
         };
 
         header = header.push(cell_el);
+
+        if i + 1 < col_count {
+            header = header.push(header_divider(&t, resize.as_ref(), i));
+        }
     }
     // Reserve the vertical scrollbar's width on the right so header columns
     // line up with body columns once the scrollable steals 10px for its track.
@@ -181,7 +224,7 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
     let mut body = column![].spacing(0);
     for (i, data) in rows.iter().enumerate() {
         let mut r = row![].spacing(0);
-        for col in &columns {
+        for (ci, col) in columns.iter().enumerate() {
             let cell = container((col.render)(data))
                 .padding(Padding::from([0.0, 12.0]))
                 .width(col.width)
@@ -189,6 +232,9 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
                 .align_x(col.align)
                 .align_y(Vertical::Center);
             r = r.push(cell);
+            if ci + 1 < col_count {
+                r = r.push(body_divider(row_height));
+            }
         }
         let zebra = striped && i % 2 == 1;
         body = body.push(
@@ -235,7 +281,7 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
     ]
     .spacing(0);
 
-    container(content)
+    let table_el: Element<Message> = container(content)
         .width(Length::Fill)
         .style(move |_| container::Style {
             background: Some(Background::Color(t.background)),
@@ -248,5 +294,66 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
             shadow: Shadow::default(),
             snap: true,
         })
+        .into();
+
+    // When a drag is in progress, overlay a transparent mouse catcher so the
+    // move/release events keep flowing even if the cursor leaves the narrow
+    // handle.
+    match resize {
+        Some(rh) if rh.dragging.is_some() => {
+            let ResizeHandlers {
+                on_drag,
+                on_release,
+                ..
+            } = rh;
+            let catcher_area: Element<Message> =
+                Space::new().width(Length::Fill).height(Length::Fill).into();
+            let catcher: Element<Message> = mouse_area(catcher_area)
+                .on_move(on_drag)
+                .on_release(on_release)
+                .into();
+            stack![table_el, catcher].into()
+        }
+        _ => table_el,
+    }
+}
+
+/// Divider strip between two header cells. Clickable when resize is enabled.
+fn header_divider<'a, Message: Clone + 'a>(
+    t: &AppTheme,
+    resize: Option<&ResizeHandlers<'a, Message>>,
+    col_idx: usize,
+) -> Element<'a, Message> {
+    let t = *t;
+    let resizable = resize.is_some();
+    let base = container(Space::new().width(Length::Fixed(DIVIDER_WIDTH)).height(Length::Fill))
+        .width(Length::Fixed(DIVIDER_WIDTH))
+        .height(Length::Fixed(36.0))
+        .style(move |_| {
+            // Subtle vertical rule; only visible when resize is enabled so the
+            // user has an affordance to grab.
+            let bg = if resizable { t.border } else { iced::Color::TRANSPARENT };
+            container::Style {
+                background: Some(Background::Color(bg)),
+                text_color: None,
+                border: Border::default(),
+                shadow: Shadow::default(),
+                snap: true,
+            }
+        });
+
+    match resize {
+        Some(rh) => {
+            let msg = (rh.on_grab)(col_idx);
+            mouse_area(base).on_press(msg).into()
+        }
+        None => base.into(),
+    }
+}
+
+fn body_divider<'a, Message: 'a>(row_height: f32) -> Element<'a, Message> {
+    container(Space::new().width(Length::Fixed(DIVIDER_WIDTH)).height(Length::Fill))
+        .width(Length::Fixed(DIVIDER_WIDTH))
+        .height(Length::Fixed(row_height))
         .into()
 }

@@ -8,7 +8,7 @@ use crate::{
     Message, State,
     components::{
         badge::{badge, BadgeVariant},
-        table::{table_with, Column, SortDir, TableOptions},
+        table::{table_with, Column, ResizeHandlers, SortDir, TableOptions},
     },
     demos::common::{section_caption, section_title, vspace},
     theme::AppTheme,
@@ -37,16 +37,25 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     let t = *theme;
     let rows = sorted_rows(state);
 
+    let w = |i: usize| {
+        state
+            .table_col_widths
+            .get(i)
+            .copied()
+            .map(Length::Fixed)
+            .unwrap_or(Length::Fill)
+    };
+
     let name_col = Column::new("Name", move |p: &Person| {
         text(p.name.to_string()).size(13.0).color(t.foreground).into()
     })
-    .width(Length::FillPortion(3))
+    .width(w(0))
     .sortable("name");
 
     let role_col = Column::new("Role", move |p: &Person| {
         text(p.role.to_string()).size(13.0).color(t.muted_foreground).into()
     })
-    .width(Length::FillPortion(3))
+    .width(w(1))
     .sortable("role");
 
     let status_col = Column::new("Status", move |p: &Person| {
@@ -57,13 +66,13 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         };
         badge(&t, p.status.to_string(), variant)
     })
-    .width(Length::FillPortion(2))
+    .width(w(2))
     .align(Horizontal::Left);
 
     let salary_col = Column::new("Salary", move |p: &Person| {
         text(format!("${}", fmt_money(p.salary))).size(13.0).color(t.foreground).into()
     })
-    .width(Length::FillPortion(2))
+    .width(w(3))
     .align(Horizontal::Right)
     .sortable("salary");
 
@@ -77,6 +86,12 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         on_sort: Some(Box::new(Message::TableSort)),
         striped: true,
         row_height: 44.0,
+        resize: Some(ResizeHandlers {
+            on_grab: Box::new(Message::TableResizeStart),
+            on_drag: Box::new(Message::TableResizeMove),
+            on_release: Message::TableResizeEnd,
+            dragging: state.table_resize_col,
+        }),
     };
 
     let tbl = table_with(
@@ -88,7 +103,10 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
 
     column![
         section_title(theme, "Sortable table"),
-        section_caption(theme, "Click a sortable header to toggle asc/desc ordering."),
+        section_caption(
+            theme,
+            "Click a sortable header to toggle asc/desc ordering. Drag a column divider to resize.",
+        ),
         tbl,
         vspace(8.0),
         text(format!("{} people", rows.len())).size(12.0).color(theme.muted_foreground),

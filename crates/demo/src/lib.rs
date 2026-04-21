@@ -246,6 +246,9 @@ pub enum Message {
 
     // Data (Phase 3)
     TableSort(&'static str),
+    TableResizeStart(usize),
+    TableResizeMove(iced::Point),
+    TableResizeEnd,
     ListSelected(usize),
     TreeToggle(String),
     TreeSelect(String),
@@ -318,6 +321,9 @@ pub struct State {
 
     // Demo state — data
     pub table_sort: Option<(&'static str, SortKind)>,
+    pub table_col_widths: Vec<f32>,
+    pub table_resize_col: Option<usize>,
+    pub table_resize_last_x: Option<f32>,
     pub list_selected: usize,
     pub data_table: crate::components::data_table::DataTable,
     pub tree_nodes: Vec<crate::components::tree::TreeNode>,
@@ -416,6 +422,9 @@ impl Default for State {
             button_group: 0,
             toggles: [true, false, false, false, false, false],
             table_sort: None,
+            table_col_widths: vec![220.0, 220.0, 140.0, 140.0],
+            table_resize_col: None,
+            table_resize_last_x: None,
             list_selected: 0,
             data_table: build_sample_data_table(),
             tree_nodes: crate::demos::tree_demo::sample_nodes(),
@@ -625,6 +634,25 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
                 Some((k, SortKind::Desc)) if k == key => None,
                 _ => Some((key, SortKind::Asc)),
             };
+        }
+        Message::TableResizeStart(i) => {
+            state.table_resize_col = Some(i);
+            state.table_resize_last_x = None;
+        }
+        Message::TableResizeMove(pt) => {
+            if let Some(i) = state.table_resize_col {
+                if let Some(last) = state.table_resize_last_x {
+                    let delta = pt.x - last;
+                    if let Some(w) = state.table_col_widths.get_mut(i) {
+                        *w = (*w + delta).clamp(60.0, 600.0);
+                    }
+                }
+                state.table_resize_last_x = Some(pt.x);
+            }
+        }
+        Message::TableResizeEnd => {
+            state.table_resize_col = None;
+            state.table_resize_last_x = None;
         }
         Message::ListSelected(i) => {
             state.list_selected = i;
