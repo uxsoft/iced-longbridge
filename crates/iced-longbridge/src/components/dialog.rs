@@ -4,11 +4,11 @@ use iced::{
     Element, Length, Padding,
     alignment::Vertical,
     widget::{button, column, container, row, text, Space},
-    Background, Border, Shadow,
 };
 
 use crate::{
     components::{icon::{icon_colored, IconName}, overlay},
+    styles,
     theme::AppTheme,
 };
 
@@ -114,25 +114,7 @@ fn close_button<'a, Message: Clone + 'a>(t: AppTheme, on_press: Message) -> Elem
     button(icon_colored::<Message>(IconName::Close, 14.0, t.muted_foreground))
         .padding(Padding::from([4.0, 6.0]))
         .on_press(on_press)
-        .style(move |_, status| {
-            use button::Status::*;
-            let bg = match status {
-                Hovered => t.accent,
-                Pressed => t.muted,
-                _ => iced::Color::TRANSPARENT,
-            };
-            button::Style {
-                background: Some(Background::Color(bg)),
-                text_color: t.foreground,
-                border: Border {
-                    color: iced::Color::TRANSPARENT,
-                    width: 0.0,
-                    radius: 4.0.into(),
-                },
-                shadow: Shadow::default(),
-                snap: true,
-            }
-        })
+        .style(move |_, status| styles::icon_button_style(&t, status, 4.0))
         .into()
 }
 
@@ -163,17 +145,8 @@ fn action_button<'a, Message: Clone + 'a>(
                 _ => (t.background, t.foreground, t.border),
             }
         };
-        button::Style {
-            background: Some(Background::Color(bg)),
-            text_color: fg,
-            border: Border {
-                color: border,
-                width: if primary { 0.0 } else { 1.0 },
-                radius: 6.0.into(),
-            },
-            shadow: Shadow::default(),
-            snap: true,
-        }
+        let border_width = if primary { 0.0 } else { 1.0 };
+        styles::button_style(Some(bg), fg, border, border_width, 6.0)
     })
     .into()
 }

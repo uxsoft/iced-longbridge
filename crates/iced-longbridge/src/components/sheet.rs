@@ -6,7 +6,7 @@ use iced::{
     widget::{container, mouse_area, stack, Space},
 };
 
-use crate::theme::AppTheme;
+use crate::{styles, theme::AppTheme};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Side {
@@ -32,13 +32,7 @@ pub fn sheet<'a, Message: Clone + 'a>(
         container(Space::new().width(Length::Fill).height(Length::Fill))
             .width(Length::Fill)
             .height(Length::Fill)
-            .style(move |_| container::Style {
-                background: Some(Background::Color(t.overlay)),
-                text_color: None,
-                border: Border::default(),
-                shadow: Shadow::default(),
-                snap: true,
-            }),
+            .style(move |_| styles::simple_container(Some(t.overlay), t.foreground, Color::TRANSPARENT, 0.0, 0.0)),
     )
     .on_press(on_dismiss);
 

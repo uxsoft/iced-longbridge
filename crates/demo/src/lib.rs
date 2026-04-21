@@ -501,7 +501,7 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
         Message::Tick => {
             state.tick_rotation =
                 (state.tick_rotation + 0.08) % (std::f32::consts::TAU);
-            state.notifications.tick(32);
+            state.notifications.tick(Duration::from_millis(32));
         }
         Message::ButtonPressed(s) => state.last_action = format!("Pressed: {s}"),
         Message::InputChanged(s) => state.input_value = s,

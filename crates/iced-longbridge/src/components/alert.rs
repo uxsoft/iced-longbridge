@@ -1,11 +1,11 @@
 //! Alert component — block-level status message.
 
 use iced::{
-    Background, Border, Element, Length, Padding, Shadow,
+    Element, Length, Padding,
     widget::{column, container, row, text},
 };
 
-use crate::theme::AppTheme;
+use crate::{styles, theme::AppTheme};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AlertVariant {
@@ -65,16 +65,6 @@ pub fn alert<'a, Message: 'a>(
     container(content)
         .padding(Padding::from([12.0, 16.0]))
         .width(Length::Fill)
-        .style(move |_| container::Style {
-            background: Some(Background::Color(bg)),
-            text_color: Some(fg),
-            border: Border {
-                color: border_color,
-                width: 1.0,
-                radius: 8.0.into(),
-            },
-            shadow: Shadow::default(),
-            snap: true,
-        })
+        .style(move |_| styles::simple_container(Some(bg), fg, border_color, 1.0, 8.0))
         .into()
 }

@@ -7,6 +7,21 @@ members = [
 ]
 resolver = "2"
 
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "MIT"
+repository = "https://github.com/uxsoft/iced-longbridge"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+# Moderate tightening without drowning component code in pedantic noise.
+# `unwrap_used` is deliberately left at default — too much existing code
+# relies on it in test helpers; sweep separately.
+too_many_arguments = "allow"
+
 [profile.dev]
 opt-level = 1
 

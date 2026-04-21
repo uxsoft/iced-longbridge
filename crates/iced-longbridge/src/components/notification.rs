@@ -9,7 +9,7 @@
 //!    page in the configured corner.
 
 use iced::{
-    Background, Border, Color, Element, Length, Padding, Shadow,
+    Color, Element, Length, Padding,
     alignment::{Horizontal, Vertical},
     widget::{button, column, container, row, text, Space},
 };
@@ -124,7 +124,8 @@ impl NotificationList {
 
     /// Decrement all remaining lifetimes and drop expired entries. A remaining
     /// value of 0 is treated as sticky and is never decremented.
-    pub fn tick(&mut self, elapsed_ms: i64) {
+    pub fn tick(&mut self, elapsed: std::time::Duration) {
+        let elapsed_ms = elapsed.as_millis().min(i64::MAX as u128) as i64;
         for n in self.items.iter_mut() {
             if n.remaining_ms > 0 {
                 n.remaining_ms -= elapsed_ms;
@@ -215,6 +216,17 @@ fn toast<'a, Message: Clone + 'a>(
         .into()
 }
 
+fn close_button<'a, Message: Clone + 'a>(
+    t: AppTheme,
+    on_press: Message,
+) -> Element<'a, Message> {
+    button(icon_colored::<Message>(IconName::Close, 12.0, t.muted_foreground))
+        .padding(Padding::from(2.0))
+        .on_press(on_press)
+        .style(move |_, status| styles::icon_button_style(&t, status, 4.0))
+        .into()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -251,7 +263,7 @@ mod tests {
         let mut list = NotificationList::new();
         list.push(n(1, 100));
         list.push(n(2, 500));
-        list.tick(200);
+        list.tick(std::time::Duration::from_millis(200));
         assert_eq!(list.items.len(), 1);
         assert_eq!(list.items[0].id, 2);
     }
@@ -260,7 +272,7 @@ mod tests {
     fn sticky_never_expires() {
         let mut list = NotificationList::new();
         list.push(Notification::new(1, NotificationKind::Info, "x").sticky());
-        list.tick(1_000_000);
+        list.tick(std::time::Duration::from_secs(1_000));
         assert_eq!(list.items.len(), 1);
         assert_eq!(list.items[0].remaining_ms, 0);
     }
@@ -274,32 +286,4 @@ mod tests {
         assert_eq!(list.items.len(), 1);
         assert_eq!(list.items[0].id, 2);
     }
-}
-
-fn close_button<'a, Message: Clone + 'a>(
-    t: AppTheme,
-    on_press: Message,
-) -> Element<'a, Message> {
-    button(icon_colored::<Message>(IconName::Close, 12.0, t.muted_foreground))
-        .padding(Padding::from(2.0))
-        .on_press(on_press)
-        .style(move |_, status| {
-            use button::Status::*;
-            let bg = match status {
-                Hovered => t.muted,
-                _ => Color::TRANSPARENT,
-            };
-            button::Style {
-                background: Some(Background::Color(bg)),
-                text_color: t.muted_foreground,
-                border: Border {
-                    color: Color::TRANSPARENT,
-                    width: 0.0,
-                    radius: 4.0.into(),
-                },
-                shadow: Shadow::default(),
-                snap: true,
-            }
-        })
-        .into()
 }

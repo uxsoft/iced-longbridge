@@ -17,6 +17,7 @@ pub fn calendar<'a, Message: Clone + 'a>(
     view_year: i32,
     view_month: u32,
     selected: Option<NaiveDate>,
+    today: NaiveDate,
     on_select: impl Fn(NaiveDate) -> Message + 'a + Copy,
     on_prev_month: Message,
     on_next_month: Message,
@@ -48,9 +49,10 @@ pub fn calendar<'a, Message: Clone + 'a>(
     for cell in 0..total_cells {
         let day_n = cell as i32 - leading as i32 + 1;
         let el: Element<Message> = if day_n >= 1 && day_n <= days_in_month as i32 {
-            let date = NaiveDate::from_ymd_opt(view_year, view_month, day_n as u32).unwrap();
+            let date = NaiveDate::from_ymd_opt(view_year, view_month, day_n as u32)
+                .expect("day_n is bounded by days_in_month");
             let is_selected = Some(date) == selected;
-            let is_today = chrono::Local::now().date_naive() == date;
+            let is_today = today == date;
             day_cell(t, day_n as u32, is_selected, is_today, on_select(date))
         } else {
             container(text("").size(13.0))

@@ -19,42 +19,31 @@ pub enum Size {
     Lg,
 }
 
+/// Layout metrics for a [`Size`]. All values are in logical pixels.
+#[derive(Debug, Clone, Copy)]
+pub struct SizeMetrics {
+    pub height: f32,
+    pub padding_x: f32,
+    pub font_size: f32,
+    pub radius: f32,
+}
+
 impl Size {
-    pub fn height(self) -> f32 {
+    /// Single source of truth for per-size layout values. Individual accessors
+    /// (`height()`, `padding_x()`, `font_size()`, `radius()`) delegate here.
+    pub const fn metrics(self) -> SizeMetrics {
         match self {
-            Size::Xs => 22.0,
-            Size::Sm => 28.0,
-            Size::Md => 34.0,
-            Size::Lg => 40.0,
+            Size::Xs => SizeMetrics { height: 22.0, padding_x: 8.0,  font_size: 11.0, radius: 4.0 },
+            Size::Sm => SizeMetrics { height: 28.0, padding_x: 12.0, font_size: 13.0, radius: 5.0 },
+            Size::Md => SizeMetrics { height: 34.0, padding_x: 16.0, font_size: 14.0, radius: 6.0 },
+            Size::Lg => SizeMetrics { height: 40.0, padding_x: 20.0, font_size: 16.0, radius: 8.0 },
         }
     }
 
-    pub fn padding_x(self) -> f32 {
-        match self {
-            Size::Xs => 8.0,
-            Size::Sm => 12.0,
-            Size::Md => 16.0,
-            Size::Lg => 20.0,
-        }
-    }
-
-    pub fn font_size(self) -> f32 {
-        match self {
-            Size::Xs => 11.0,
-            Size::Sm => 13.0,
-            Size::Md => 14.0,
-            Size::Lg => 16.0,
-        }
-    }
-
-    pub fn radius(self) -> f32 {
-        match self {
-            Size::Xs => 4.0,
-            Size::Sm => 5.0,
-            Size::Md => 6.0,
-            Size::Lg => 8.0,
-        }
-    }
+    pub fn height(self) -> f32 { self.metrics().height }
+    pub fn padding_x(self) -> f32 { self.metrics().padding_x }
+    pub fn font_size(self) -> f32 { self.metrics().font_size }
+    pub fn radius(self) -> f32 { self.metrics().radius }
 }
 
 /// Full palette used across the component library.
@@ -217,6 +206,12 @@ impl AppTheme {
         }
     }
 
+    /// Default 10-colour featured swatch palette used by the colour picker.
+    /// Override per-theme if a particular palette makes sense for your app.
+    pub fn featured_palette(&self) -> &'static [Color] {
+        DEFAULT_FEATURED_PALETTE
+    }
+
     pub fn iced_theme(&self) -> Theme {
         let palette = Palette {
             background: self.background,
@@ -240,3 +235,23 @@ const fn rgb(r: u8, g: u8, b: u8) -> Color {
 pub fn with_alpha(color: Color, a: f32) -> Color {
     Color { a, ..color }
 }
+
+impl Default for AppTheme {
+    fn default() -> Self {
+        Self::light()
+    }
+}
+
+/// Featured swatches shown across the colour picker and other palette UIs.
+const DEFAULT_FEATURED_PALETTE: &[Color] = &[
+    Color { r: 0.93, g: 0.27, b: 0.27, a: 1.0 }, // red
+    Color { r: 0.98, g: 0.68, b: 0.13, a: 1.0 }, // orange
+    Color { r: 0.92, g: 0.79, b: 0.11, a: 1.0 }, // yellow
+    Color { r: 0.15, g: 0.77, b: 0.37, a: 1.0 }, // green
+    Color { r: 0.02, g: 0.71, b: 0.83, a: 1.0 }, // cyan
+    Color { r: 0.23, g: 0.51, b: 0.96, a: 1.0 }, // blue
+    Color { r: 0.55, g: 0.36, b: 0.96, a: 1.0 }, // violet
+    Color { r: 0.93, g: 0.33, b: 0.78, a: 1.0 }, // pink
+    Color { r: 0.10, g: 0.10, b: 0.10, a: 1.0 }, // near-black
+    Color { r: 0.95, g: 0.95, b: 0.95, a: 1.0 }, // near-white
+];

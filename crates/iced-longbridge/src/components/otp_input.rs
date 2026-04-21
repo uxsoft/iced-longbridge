@@ -47,13 +47,16 @@ pub fn otp_input<'a, Message: Clone + 'a>(
                 let new_chars: Vec<char> = new_value.chars().collect();
                 let mut updated: Vec<char> = existing.chars().collect();
                 updated.resize(length, ' ');
-                let advance = if new_chars.is_empty() {
-                    updated[i] = ' ';
-                    None
-                } else {
-                    // Typing over a filled field: the last character wins.
-                    updated[i] = *new_chars.last().unwrap();
-                    (i + 1 < length).then_some(i + 1)
+                let advance = match new_chars.last() {
+                    None => {
+                        updated[i] = ' ';
+                        None
+                    }
+                    Some(&ch) => {
+                        // Typing over a filled field: the last character wins.
+                        updated[i] = ch;
+                        (i + 1 < length).then_some(i + 1)
+                    }
                 };
                 let new_val = updated
                     .into_iter()

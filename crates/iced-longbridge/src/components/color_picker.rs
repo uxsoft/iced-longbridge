@@ -15,20 +15,6 @@ use crate::{
 
 const PANEL_WIDTH: f32 = 280.0;
 
-/// A handful of featured colors shown at the top of the panel.
-pub const DEFAULT_PALETTE: &[Color] = &[
-    Color { r: 0.93, g: 0.27, b: 0.27, a: 1.0 }, // red
-    Color { r: 0.98, g: 0.68, b: 0.13, a: 1.0 }, // orange
-    Color { r: 0.92, g: 0.79, b: 0.11, a: 1.0 }, // yellow
-    Color { r: 0.15, g: 0.77, b: 0.37, a: 1.0 }, // green
-    Color { r: 0.02, g: 0.71, b: 0.83, a: 1.0 }, // cyan
-    Color { r: 0.23, g: 0.51, b: 0.96, a: 1.0 }, // blue
-    Color { r: 0.55, g: 0.36, b: 0.96, a: 1.0 }, // violet
-    Color { r: 0.93, g: 0.33, b: 0.78, a: 1.0 }, // pink
-    Color { r: 0.10, g: 0.10, b: 0.10, a: 1.0 }, // near-black
-    Color { r: 0.95, g: 0.95, b: 0.95, a: 1.0 }, // near-white
-];
-
 pub fn color_picker<'a, Message: Clone + 'a>(
     theme: &AppTheme,
     value: Color,
@@ -98,7 +84,7 @@ fn panel<'a, Message: Clone + 'a>(
     let (h, s, l) = color_to_hsl(value);
 
     let mut featured = row![].spacing(6).align_y(Vertical::Center);
-    for c in DEFAULT_PALETTE {
+    for c in theme.featured_palette() {
         let col = *c;
         featured = featured.push(
             button(Space::new().width(Length::Fixed(22.0)).height(Length::Fixed(22.0)))

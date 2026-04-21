@@ -1,11 +1,11 @@
 //! Tag component — like a badge but with squared corners and used for labels.
 
 use iced::{
-    Background, Border, Element, Padding, Shadow,
+    Element, Padding,
     widget::{container, text},
 };
 
-use crate::theme::AppTheme;
+use crate::{styles, theme::AppTheme};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TagVariant {
@@ -53,16 +53,6 @@ pub fn tag<'a, Message: 'a>(
     };
     container(text(label).size(12.0).color(fg))
         .padding(Padding::from([2.0, 8.0]))
-        .style(move |_| container::Style {
-            background: bg.map(Background::Color),
-            text_color: Some(fg),
-            border: Border {
-                color: border,
-                width: 1.0,
-                radius: 4.0.into(),
-            },
-            shadow: Shadow::default(),
-            snap: true,
-        })
+        .style(move |_| styles::simple_container(bg, fg, border, 1.0, 4.0))
         .into()
 }

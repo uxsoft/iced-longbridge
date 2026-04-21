@@ -5,6 +5,17 @@
 //! fall inside the viewport plus a small buffer, with two [`Space`] spacers
 //! above and below to preserve the total scroll height. This keeps memory and
 //! layout costs constant regardless of item count.
+//!
+//! # Contract
+//!
+//! - **Rows must be a uniform fixed height** equal to `row_height`. Variable
+//!   heights will break the offset math and desync the scrollbar.
+//! - `row_height` must be positive; values ≤ 0 are clamped to 1.0.
+//! - `render_row` is called once per visible index; it should not depend on
+//!   hover state to change layout (the item may be re-indexed on scroll).
+//! - The scroll offset passed back through `on_scroll` is the absolute pixel
+//!   offset from the top — store it verbatim and pass it back on the next
+//!   render.
 
 use iced::{
     Background, Border, Element, Length, Padding, Shadow,

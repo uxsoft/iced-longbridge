@@ -64,91 +64,6 @@ pub fn button_ex<'a, Message: 'a + Clone>(
     btn.into()
 }
 
-#[allow(dead_code)]
-pub fn primary<'a, Message: 'a + Clone>(
-    theme: &AppTheme,
-    label: impl Into<String>,
-    on_press: Message,
-) -> Element<'a, Message> {
-    button_ex(
-        theme,
-        label,
-        Variant::Primary,
-        Size::Md,
-        Some(on_press),
-        false,
-        false,
-    )
-}
-
-#[allow(dead_code)]
-pub fn secondary<'a, Message: 'a + Clone>(
-    theme: &AppTheme,
-    label: impl Into<String>,
-    on_press: Message,
-) -> Element<'a, Message> {
-    button_ex(
-        theme,
-        label,
-        Variant::Secondary,
-        Size::Md,
-        Some(on_press),
-        false,
-        false,
-    )
-}
-
-#[allow(dead_code)]
-pub fn outline<'a, Message: 'a + Clone>(
-    theme: &AppTheme,
-    label: impl Into<String>,
-    on_press: Message,
-) -> Element<'a, Message> {
-    button_ex(
-        theme,
-        label,
-        Variant::Outline,
-        Size::Md,
-        Some(on_press),
-        false,
-        false,
-    )
-}
-
-#[allow(dead_code)]
-pub fn ghost<'a, Message: 'a + Clone>(
-    theme: &AppTheme,
-    label: impl Into<String>,
-    on_press: Message,
-) -> Element<'a, Message> {
-    button_ex(
-        theme,
-        label,
-        Variant::Ghost,
-        Size::Md,
-        Some(on_press),
-        false,
-        false,
-    )
-}
-
-#[allow(dead_code)]
-pub fn danger<'a, Message: 'a + Clone>(
-    theme: &AppTheme,
-    label: impl Into<String>,
-    on_press: Message,
-) -> Element<'a, Message> {
-    button_ex(
-        theme,
-        label,
-        Variant::Danger,
-        Size::Md,
-        Some(on_press),
-        false,
-        false,
-    )
-}
-
 fn variant_style(
     t: &AppTheme,
     variant: Variant,
@@ -191,42 +106,30 @@ fn variant_style(
             };
             (Some(bg), t.foreground, iced::Color::TRANSPARENT, 0.0)
         }
-        Variant::Danger => {
-            let bg = match status {
-                Hovered => crate::theme::with_alpha(t.danger, 0.9),
-                Pressed => crate::theme::with_alpha(t.danger, 0.8),
-                Disabled => crate::theme::with_alpha(t.danger, 0.5),
-                Active => t.danger,
-            };
-            (Some(bg), t.danger_foreground, t.danger, 0.0)
-        }
-        Variant::Success => {
-            let bg = match status {
-                Hovered => crate::theme::with_alpha(t.success, 0.9),
-                Pressed => crate::theme::with_alpha(t.success, 0.8),
-                Disabled => crate::theme::with_alpha(t.success, 0.5),
-                Active => t.success,
-            };
-            (Some(bg), t.success_foreground, t.success, 0.0)
-        }
-        Variant::Warning => {
-            let bg = match status {
-                Hovered => crate::theme::with_alpha(t.warning, 0.9),
-                Pressed => crate::theme::with_alpha(t.warning, 0.8),
-                Disabled => crate::theme::with_alpha(t.warning, 0.5),
-                Active => t.warning,
-            };
-            (Some(bg), t.warning_foreground, t.warning, 0.0)
-        }
-        Variant::Info => {
-            let bg = match status {
-                Hovered => crate::theme::with_alpha(t.info, 0.9),
-                Pressed => crate::theme::with_alpha(t.info, 0.8),
-                Disabled => crate::theme::with_alpha(t.info, 0.5),
-                Active => t.info,
-            };
-            (Some(bg), t.info_foreground, t.info, 0.0)
-        }
+        Variant::Danger => (
+            Some(styles::tinted_status(t.danger, status)),
+            t.danger_foreground,
+            t.danger,
+            0.0,
+        ),
+        Variant::Success => (
+            Some(styles::tinted_status(t.success, status)),
+            t.success_foreground,
+            t.success,
+            0.0,
+        ),
+        Variant::Warning => (
+            Some(styles::tinted_status(t.warning, status)),
+            t.warning_foreground,
+            t.warning,
+            0.0,
+        ),
+        Variant::Info => (
+            Some(styles::tinted_status(t.info, status)),
+            t.info_foreground,
+            t.info,
+            0.0,
+        ),
         Variant::Link => {
             let fg = match status {
                 Hovered | Pressed => t.link_hover,

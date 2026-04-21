@@ -46,11 +46,11 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     .into()
 }
 
-fn row_view<'a>(t: AppTheme, label: &'a String, index: usize, selected: bool) -> Element<'a, Message> {
+fn row_view<'a>(t: AppTheme, label: &'a str, index: usize, selected: bool) -> Element<'a, Message> {
     let bg = if selected { t.accent } else { t.background };
     let content = row![
         text(format!("{:05}", index)).size(12.0).color(t.muted_foreground),
-        text(label.clone()).size(13.0).color(t.foreground),
+        text(label.to_owned()).size(13.0).color(t.foreground),
     ]
     .spacing(16)
     .align_y(Vertical::Center);

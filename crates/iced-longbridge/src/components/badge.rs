@@ -1,11 +1,11 @@
 //! Badge component — small inline status indicator.
 
 use iced::{
-    Background, Border, Element, Padding, Shadow,
+    Element, Padding,
     widget::{container, text},
 };
 
-use crate::theme::AppTheme;
+use crate::{styles, theme::AppTheme};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BadgeVariant {
@@ -35,18 +35,9 @@ pub fn badge<'a, Message: 'a>(
         BadgeVariant::Warning => (Some(t.warning), t.warning_foreground, t.warning),
         BadgeVariant::Info => (Some(t.info), t.info_foreground, t.info),
     };
+    let border_width = if matches!(variant, BadgeVariant::Outline) { 1.0 } else { 0.0 };
     container(text(label).size(11.0).color(fg))
         .padding(Padding::from([2.0, 8.0]))
-        .style(move |_| container::Style {
-            background: bg.map(Background::Color),
-            text_color: Some(fg),
-            border: Border {
-                color: border,
-                width: if matches!(variant, BadgeVariant::Outline) { 1.0 } else { 0.0 },
-                radius: 999.0.into(),
-            },
-            shadow: Shadow::default(),
-            snap: true,
-        })
+        .style(move |_| styles::simple_container(bg, fg, border, border_width, 999.0))
         .into()
 }

@@ -43,8 +43,7 @@ pub fn breadcrumb<'a, Message: Clone + 'a>(
         let is_link = !is_last && crumb.on_press.is_some();
         let fg = if is_last { t.foreground } else { t.muted_foreground };
 
-        if is_link {
-            let msg = crumb.on_press.unwrap();
+        if let (true, Some(msg)) = (is_link, crumb.on_press) {
             let btn = button(text(crumb.label).size(13.0).color(fg))
                 .padding(Padding::from([2.0, 4.0]))
                 .on_press(msg)

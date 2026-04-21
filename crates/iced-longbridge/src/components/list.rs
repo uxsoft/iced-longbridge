@@ -1,13 +1,14 @@
 //! List — scrollable column of pressable rows.
 
 use iced::{
-    Background, Border, Element, Length, Padding, Shadow,
+    Color, Element, Length, Padding,
     alignment::Vertical,
     widget::{button, column, container, row, scrollable, text, Space},
 };
 
 use crate::{
     components::icon::{icon, IconName},
+    styles,
     theme::AppTheme,
 };
 
@@ -115,25 +116,15 @@ pub fn list_item<'a, Message: Clone + 'a>(
         let bg = if selected {
             t.accent
         } else if disabled {
-            iced::Color::TRANSPARENT
+            Color::TRANSPARENT
         } else {
             match status {
                 Hovered => t.muted,
                 Pressed => t.accent,
-                _ => iced::Color::TRANSPARENT,
+                _ => Color::TRANSPARENT,
             }
         };
-        button::Style {
-            background: Some(Background::Color(bg)),
-            text_color: fg,
-            border: Border {
-                color: iced::Color::TRANSPARENT,
-                width: 0.0,
-                radius: 4.0.into(),
-            },
-            shadow: Shadow::default(),
-            snap: true,
-        }
+        styles::button_style(Some(bg), fg, Color::TRANSPARENT, 0.0, 4.0)
     });
     if !disabled && let Some(m) = item.on_press {
         btn = btn.on_press(m);
@@ -153,16 +144,8 @@ pub fn list<'a, Message: Clone + 'a>(
     container(scrollable(c))
         .padding(Padding::from(6.0))
         .width(Length::Fill)
-        .style(move |_| container::Style {
-            background: Some(Background::Color(t.background)),
-            text_color: Some(t.foreground),
-            border: Border {
-                color: t.border,
-                width: 1.0,
-                radius: 8.0.into(),
-            },
-            shadow: Shadow::default(),
-            snap: true,
+        .style(move |_| {
+            styles::simple_container(Some(t.background), t.foreground, t.border, 1.0, 8.0)
         })
         .into()
 }

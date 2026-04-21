@@ -9,7 +9,7 @@ use iced::{
     widget::{container, stack, Space},
 };
 
-use crate::theme::AppTheme;
+use crate::{styles, theme::AppTheme};
 
 /// Wrap `base` with an overlay that only renders when `shown` is true.
 ///
@@ -30,12 +30,8 @@ pub fn overlay<'a, Message: Clone + 'a>(
         container(Space::new().width(Length::Fill).height(Length::Fill))
             .width(Length::Fill)
             .height(Length::Fill)
-            .style(move |_| container::Style {
-                background: Some(Background::Color(t.overlay)),
-                text_color: None,
-                border: Border::default(),
-                shadow: Shadow::default(),
-                snap: true,
+            .style(move |_| {
+                styles::simple_container(Some(t.overlay), t.foreground, Color::TRANSPARENT, 0.0, 0.0)
             }),
     );
     let backdrop = if let Some(msg) = on_backdrop_press {
@@ -55,7 +51,6 @@ pub fn overlay<'a, Message: Clone + 'a>(
 
 /// Render `panel` anchored to a corner of the surface with an offset.
 /// Used for toast stacks (bottom-right) and sheet side panels.
-#[allow(dead_code)]
 pub fn anchored<'a, Message: 'a>(
     base: Element<'a, Message>,
     panel: Element<'a, Message>,

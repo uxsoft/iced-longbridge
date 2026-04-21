@@ -63,6 +63,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
             state.calendar_view_year,
             state.calendar_view_month,
             state.calendar_selected,
+            chrono::Local::now().date_naive(),
             Message::DatePickerSelect,
             Message::CalendarPrevMonth,
             Message::CalendarNextMonth,

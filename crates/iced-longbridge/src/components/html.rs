@@ -3,8 +3,17 @@
 //! Tokenizes common inline and block tags into a Markdown string and then
 //! reuses the [`markdown`](super::markdown) pipeline. Supported tags:
 //! `h1`–`h6`, `p`, `br`, `hr`, `strong`/`b`, `em`/`i`, `code`, `pre`, `a`,
-//! `ul`, `ol`, `li`, `blockquote`. Unknown tags are stripped but their text
-//! content is preserved.
+//! `ul`, `ol`, `li`, `blockquote`. `<script>`, `<style>`, and `<!-- … -->`
+//! are recognised and their contents are dropped. Unknown tags are stripped
+//! but their text content is preserved.
+//!
+//! Anchor `href` values are filtered through [`sanitize_href`] — only
+//! `http`, `https`, `mailto`, `tel`, fragment-only, and relative URLs are
+//! forwarded to the caller. `javascript:`, `data:`, `file:`, and similar
+//! schemes are dropped silently so a malicious host cannot smuggle active
+//! content through the link click handler.
+
+use std::fmt::Write as _;
 
 use iced::Element;
 
@@ -48,7 +57,9 @@ pub fn to_markdown(html: &str) -> String {
                         out.push('\n');
                         match kind {
                             ListKind::Unordered => out.push_str("- "),
-                            ListKind::Ordered => out.push_str(&format!("{}. ", counter)),
+                            ListKind::Ordered => {
+                                let _ = write!(out, "{}. ", counter);
+                            }
                         }
                     } else {
                         out.push_str("\n- ");
@@ -56,10 +67,6 @@ pub fn to_markdown(html: &str) -> String {
                 }
                 "a" => {
                     out.push('[');
-                    // href resolved on close. Only http/https/mailto/# schemes are
-                    // forwarded — javascript:, data:, file: and friends are dropped
-                    // so a malicious host can't smuggle active content through the
-                    // link click handler.
                     tokens.pending_href = attrs
                         .iter()
                         .find(|(k, _)| k == "href")
@@ -82,7 +89,7 @@ pub fn to_markdown(html: &str) -> String {
                 }
                 "a" => {
                     let href = tokens.pending_href.take().unwrap_or_default();
-                    out.push_str(&format!("]({})", href));
+                    let _ = write!(out, "]({})", href);
                 }
                 _ => {}
             },
@@ -98,6 +105,14 @@ pub fn to_markdown(html: &str) -> String {
 }
 
 /// Parse an HTML subset into Markdown items ready for [`render`].
+///
+/// # Examples
+///
+/// ```
+/// use iced_longbridge::components::html;
+/// let items = html::parse("<h1>hi</h1><p>world</p>");
+/// assert!(!items.is_empty());
+/// ```
 pub fn parse(html: &str) -> Vec<Item> {
     let md = to_markdown(html);
     markdown::parse(&md).collect()
@@ -136,6 +151,34 @@ impl<'a> Tokenizer<'a> {
     fn new(src: &'a str) -> Self {
         Self { src, pos: 0, pending_href: None }
     }
+
+    /// Skip past a closing tag (case-insensitive) including any `<!-- … -->`
+    /// comments inside. Used for raw-text elements like `<script>` / `<style>`
+    /// whose contents we drop rather than render.
+    fn skip_to_close(&mut self, tag: &str) {
+        let bytes = self.src.as_bytes();
+        let needle_prefix = b"</";
+        while self.pos < bytes.len() {
+            if bytes[self.pos] == b'<'
+                && self.pos + 2 <= bytes.len()
+                && &bytes[self.pos..self.pos + 2] == needle_prefix
+            {
+                // Check for the closing tag name (case-insensitive).
+                let rest = &self.src[self.pos + 2..];
+                let name_end = rest
+                    .find(|c: char| c == '>' || c.is_whitespace() || c == '/')
+                    .unwrap_or(rest.len());
+                if rest[..name_end].eq_ignore_ascii_case(tag) {
+                    // Fast-forward past the closing tag.
+                    if let Some(gt) = rest.find('>') {
+                        self.pos += 2 + gt + 1;
+                        return;
+                    }
+                }
+            }
+            self.pos += 1;
+        }
+    }
 }
 
 impl Iterator for Tokenizer<'_> {
@@ -148,9 +191,39 @@ impl Iterator for Tokenizer<'_> {
         }
 
         if bytes[self.pos] == b'<' {
+            // HTML comment: `<!-- … -->`. Skip it entirely.
+            if self.src[self.pos..].starts_with("<!--") {
+                if let Some(end) = self.src[self.pos + 4..].find("-->") {
+                    self.pos += 4 + end + 3;
+                    return self.next();
+                }
+                // Unterminated comment — consume to EOF.
+                self.pos = bytes.len();
+                return None;
+            }
+            // Doctype or processing instruction `<!DOCTYPE …>`, `<? … ?>`.
+            if self.src[self.pos..].starts_with("<!")
+                || self.src[self.pos..].starts_with("<?")
+            {
+                if let Some(end) = self.src[self.pos..].find('>') {
+                    self.pos += end + 1;
+                    return self.next();
+                }
+                self.pos = bytes.len();
+                return None;
+            }
+
             // Try to parse a tag; if it doesn't parse, fall through to text.
             if let Some((tok, new_pos)) = parse_tag(self.src, self.pos) {
                 self.pos = new_pos;
+                // Raw-text elements: their bodies are NOT html. Drop until close.
+                if let Token::Open(name, _) = &tok
+                    && matches!(name.as_str(), "script" | "style")
+                {
+                    let tag = name.clone();
+                    self.skip_to_close(&tag);
+                    return self.next();
+                }
                 return Some(tok);
             }
         }
@@ -189,7 +262,8 @@ fn parse_tag(src: &str, pos: usize) -> Option<(Token, usize)> {
     // Extract tag name.
     let name_end = body.find(|c: char| c.is_whitespace()).unwrap_or(body.len());
     let name = body[..name_end].trim().to_ascii_lowercase();
-    if name.is_empty() || !name.chars().next().unwrap().is_ascii_alphabetic() {
+    let first = name.chars().next()?;
+    if !first.is_ascii_alphabetic() {
         return None;
     }
 
@@ -236,7 +310,7 @@ fn parse_attrs(s: &str) -> Vec<(String, String)> {
             let quote = chars.peek().copied();
             match quote {
                 Some('"') | Some('\'') => {
-                    let q = chars.next().unwrap();
+                    let Some(q) = chars.next() else { break };
                     for c in chars.by_ref() {
                         if c == q {
                             break;
@@ -260,19 +334,88 @@ fn parse_attrs(s: &str) -> Vec<(String, String)> {
     out
 }
 
+/// Decode the common named entities plus decimal and hexadecimal numeric
+/// references. Unknown references are left as-is so callers can inspect them.
 fn decode_entities(s: &str) -> String {
-    s.replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&nbsp;", " ")
+    if !s.contains('&') {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '&' {
+            out.push(c);
+            continue;
+        }
+        // Greedily consume up to ';' or 16 chars.
+        let mut body = String::new();
+        let mut terminated = false;
+        for _ in 0..16 {
+            match chars.peek() {
+                Some(&';') => {
+                    chars.next();
+                    terminated = true;
+                    break;
+                }
+                Some(&next) if next.is_alphanumeric() || next == '#' => {
+                    body.push(next);
+                    chars.next();
+                }
+                _ => break,
+            }
+        }
+        if !terminated {
+            out.push('&');
+            out.push_str(&body);
+            continue;
+        }
+        match decode_entity_body(&body) {
+            Some(decoded) => out.push_str(&decoded),
+            None => {
+                out.push('&');
+                out.push_str(&body);
+                out.push(';');
+            }
+        }
+    }
+    out
+}
+
+fn decode_entity_body(body: &str) -> Option<String> {
+    match body {
+        "amp" => Some("&".to_string()),
+        "lt" => Some("<".to_string()),
+        "gt" => Some(">".to_string()),
+        "quot" => Some("\"".to_string()),
+        "apos" => Some("'".to_string()),
+        "nbsp" => Some(" ".to_string()),
+        // Decimal: &#NNN;
+        s if s.starts_with('#') && !s.starts_with("#x") && !s.starts_with("#X") => {
+            let n = s[1..].parse::<u32>().ok()?;
+            char::from_u32(n).map(|c| c.to_string())
+        }
+        // Hex: &#xNN;
+        s if s.starts_with("#x") || s.starts_with("#X") => {
+            let n = u32::from_str_radix(&s[2..], 16).ok()?;
+            char::from_u32(n).map(|c| c.to_string())
+        }
+        _ => None,
+    }
 }
 
 /// Only forward anchor hrefs whose scheme we trust. Fragment-only links (`#id`)
 /// and scheme-less relative links are also allowed — everything else (notably
 /// `javascript:`, `data:`, `file:`, `vbscript:`) is dropped.
-pub(crate) fn sanitize_href(href: &str) -> Option<&str> {
+///
+/// # Examples
+///
+/// ```
+/// use iced_longbridge::components::html::sanitize_href;
+/// assert_eq!(sanitize_href("https://example.com"), Some("https://example.com"));
+/// assert_eq!(sanitize_href("javascript:alert(1)"), None);
+/// assert_eq!(sanitize_href("/local/path"), Some("/local/path"));
+/// ```
+pub fn sanitize_href(href: &str) -> Option<&str> {
     let trimmed = href.trim();
     if trimmed.is_empty() {
         return None;
@@ -292,7 +435,6 @@ pub(crate) fn sanitize_href(href: &str) -> Option<&str> {
                 None
             }
         }
-        // No scheme delimiter before a path/query/fragment → relative URL.
         _ => Some(trimmed),
     }
 }
@@ -355,10 +497,28 @@ mod tests {
     }
 
     #[test]
-    fn decode_entities_handles_basics() {
+    fn decode_entities_handles_named() {
         assert_eq!(decode_entities("a &amp; b"), "a & b");
         assert_eq!(decode_entities("&lt;tag&gt;"), "<tag>");
         assert_eq!(decode_entities("x&nbsp;y"), "x y");
+        assert_eq!(decode_entities("it&apos;s"), "it's");
+    }
+
+    #[test]
+    fn decode_entities_handles_numeric() {
+        assert_eq!(decode_entities("&#65;&#66;"), "AB");
+        assert_eq!(decode_entities("&#x41;&#x42;"), "AB");
+        assert_eq!(decode_entities("caf&#233;"), "café");
+    }
+
+    #[test]
+    fn decode_entities_preserves_unknown() {
+        assert_eq!(decode_entities("&bogus;"), "&bogus;");
+    }
+
+    #[test]
+    fn decode_entities_handles_bare_ampersand() {
+        assert_eq!(decode_entities("a & b"), "a & b");
     }
 
     #[test]
@@ -367,5 +527,34 @@ mod tests {
         assert!(md.contains("line1"));
         assert!(md.contains("line2"));
         assert!(md.contains("---"));
+    }
+
+    #[test]
+    fn tokenizer_drops_script_bodies() {
+        let md = to_markdown("<p>before</p><script>alert('xss')</script><p>after</p>");
+        assert!(md.contains("before"));
+        assert!(md.contains("after"));
+        assert!(!md.contains("alert"), "script body leaked: {}", md);
+    }
+
+    #[test]
+    fn tokenizer_drops_style_bodies() {
+        let md = to_markdown("<p>a</p><style>body { color: red; }</style><p>b</p>");
+        assert!(!md.contains("color: red"));
+    }
+
+    #[test]
+    fn tokenizer_drops_html_comments() {
+        let md = to_markdown("before<!-- secret -->after");
+        assert!(md.contains("before"));
+        assert!(md.contains("after"));
+        assert!(!md.contains("secret"));
+    }
+
+    #[test]
+    fn tokenizer_drops_doctype() {
+        let md = to_markdown("<!DOCTYPE html><p>hello</p>");
+        assert!(md.contains("hello"));
+        assert!(!md.contains("DOCTYPE"));
     }
 }

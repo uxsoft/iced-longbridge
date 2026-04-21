@@ -1,13 +1,14 @@
 //! Menu items — shared renderer for dropdown, context, and popup menus.
 
 use iced::{
-    Background, Border, Element, Length, Padding, Shadow,
+    Color, Element, Length, Padding,
     alignment::Vertical,
     widget::{button, column, container, row, text, Space},
 };
 
 use crate::{
     components::icon::{icon, IconName},
+    styles,
     theme::AppTheme,
 };
 
@@ -79,12 +80,8 @@ pub fn menu<'a, Message: Clone + 'a>(
                         .width(Length::Fill)
                         .height(Length::Fixed(1.0))
                         .padding(Padding { top: 4.0, bottom: 4.0, left: 0.0, right: 0.0 })
-                        .style(move |_| container::Style {
-                            background: Some(Background::Color(t.border)),
-                            text_color: None,
-                            border: Border::default(),
-                            shadow: Shadow::default(),
-                            snap: true,
+                        .style(move |_| {
+                            styles::simple_container(Some(t.border), t.foreground, Color::TRANSPARENT, 0.0, 0.0)
                         }),
                 );
             }
@@ -125,25 +122,15 @@ pub fn menu<'a, Message: Clone + 'a>(
                     .style(move |_, status| {
                         use button::Status::*;
                         let bg = if disabled {
-                            iced::Color::TRANSPARENT
+                            Color::TRANSPARENT
                         } else {
                             match status {
                                 Hovered => t.accent,
                                 Pressed => t.muted,
-                                _ => iced::Color::TRANSPARENT,
+                                _ => Color::TRANSPARENT,
                             }
                         };
-                        button::Style {
-                            background: Some(Background::Color(bg)),
-                            text_color: fg,
-                            border: Border {
-                                color: iced::Color::TRANSPARENT,
-                                width: 0.0,
-                                radius: 4.0.into(),
-                            },
-                            shadow: Shadow::default(),
-                            snap: true,
-                        }
+                        styles::button_style(Some(bg), fg, Color::TRANSPARENT, 0.0, 4.0)
                     });
                 if !disabled {
                     btn = btn.on_press(on_press);
