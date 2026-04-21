@@ -28,6 +28,7 @@ where
     panel: Option<Element<'a, Message, Theme, Renderer>>,
     gap: f32,
     align: Horizontal,
+    flip: bool,
 }
 
 impl<'a, Message, Theme, Renderer> FloatingPanel<'a, Message, Theme, Renderer>
@@ -43,6 +44,7 @@ where
             panel,
             gap: 4.0,
             align: Horizontal::Left,
+            flip: true,
         }
     }
 
@@ -53,6 +55,15 @@ where
 
     pub fn align(mut self, align: Horizontal) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Whether the panel should flip above the trigger when it doesn't fit
+    /// below. Disable for chrome that must anchor consistently (e.g. an
+    /// application menu bar where every dropdown should open downward,
+    /// regardless of item count).
+    pub fn flip(mut self, flip: bool) -> Self {
+        self.flip = flip;
         self
     }
 }
@@ -200,6 +211,7 @@ where
                     trigger_bounds: layout.bounds() + translation,
                     gap: self.gap,
                     align: self.align,
+                    flip: self.flip,
                 })))
             }
             _ => None,
@@ -236,6 +248,7 @@ where
     trigger_bounds: Rectangle,
     gap: f32,
     align: Horizontal,
+    flip: bool,
 }
 
 impl<Message, Theme, Renderer> Overlay<Message, Theme, Renderer>
@@ -266,7 +279,7 @@ where
         let max_x = (bounds.width - panel_size.width).max(0.0);
         let x = x.clamp(0.0, max_x);
 
-        if y + panel_size.height > bounds.height {
+        if self.flip && y + panel_size.height > bounds.height {
             let flipped = self.trigger_bounds.y - self.gap - panel_size.height;
             if flipped >= 0.0 {
                 y = flipped;

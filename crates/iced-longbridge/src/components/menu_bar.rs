@@ -64,7 +64,7 @@ pub fn menu_bar<'a, Message: Clone + 'a>(
                 .style(move |_| styles::popover_container(&t, 8.0))
                 .into()
         });
-        bar = bar.push(FloatingPanel::new(trigger, panel));
+        bar = bar.push(FloatingPanel::new(trigger, panel).flip(false));
     }
 
     container(bar)
