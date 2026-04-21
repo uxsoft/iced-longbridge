@@ -311,6 +311,7 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
             let catcher: Element<Message> = mouse_area(catcher_area)
                 .on_move(on_drag)
                 .on_release(on_release)
+                .interaction(iced::mouse::Interaction::ResizingHorizontally)
                 .into();
             stack![table_el, catcher].into()
         }
@@ -345,7 +346,10 @@ fn header_divider<'a, Message: Clone + 'a>(
     match resize {
         Some(rh) => {
             let msg = (rh.on_grab)(col_idx);
-            mouse_area(base).on_press(msg).into()
+            mouse_area(base)
+                .on_press(msg)
+                .interaction(iced::mouse::Interaction::ResizingHorizontally)
+                .into()
         }
         None => base.into(),
     }
