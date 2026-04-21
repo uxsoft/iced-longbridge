@@ -10,7 +10,7 @@ use iced::{
     widget::{button, container},
 };
 
-use crate::theme::{with_alpha, AppTheme};
+use crate::theme::{AppTheme, with_alpha};
 
 /// Scale a base accent colour by button status. Used by every tinted button
 /// variant (Danger, Success, Warning, Info) to avoid re-writing the same
@@ -34,7 +34,13 @@ pub fn icon_button_style(theme: &AppTheme, status: button::Status, radius: f32) 
         Pressed => theme.muted,
         _ => Color::TRANSPARENT,
     };
-    button_style(Some(bg), theme.muted_foreground, Color::TRANSPARENT, 0.0, radius)
+    button_style(
+        Some(bg),
+        theme.muted_foreground,
+        Color::TRANSPARENT,
+        0.0,
+        radius,
+    )
 }
 
 /// Build a [`button::Style`] with the library's defaults (no shadow, snap on).
@@ -70,7 +76,7 @@ pub fn popover_container(theme: &AppTheme, radius: f32) -> container::Style {
             radius: radius.into(),
         },
         shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+            color: Color::from_rgba(0.0, 0.0, 0.0, 0.0), // 0.25),
             offset: Vector::new(0.0, 6.0),
             blur_radius: 18.0,
         },
@@ -112,7 +118,7 @@ pub fn tooltip_container(theme: &AppTheme, radius: f32) -> container::Style {
             radius: radius.into(),
         },
         shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.15),
+            color: Color::from_rgba(0.0, 0.0, 0.0, 0.0), //0.15),
             offset: Vector::new(0.0, 2.0),
             blur_radius: 6.0,
         },
@@ -122,11 +128,7 @@ pub fn tooltip_container(theme: &AppTheme, radius: f32) -> container::Style {
 
 /// Popover style with a custom accent border color — used by toasts to tint
 /// the border by notification kind.
-pub fn popover_container_accent(
-    theme: &AppTheme,
-    accent: Color,
-    radius: f32,
-) -> container::Style {
+pub fn popover_container_accent(theme: &AppTheme, accent: Color, radius: f32) -> container::Style {
     container::Style {
         background: Some(Background::Color(theme.popover)),
         text_color: Some(theme.popover_foreground),
@@ -136,7 +138,7 @@ pub fn popover_container_accent(
             radius: radius.into(),
         },
         shadow: Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+            color: Color::from_rgba(0.0, 0.0, 0.0, 0.0), // 0.25),
             offset: Vector::new(0.0, 4.0),
             blur_radius: 14.0,
         },
