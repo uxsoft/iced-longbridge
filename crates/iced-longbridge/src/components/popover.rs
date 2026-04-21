@@ -12,19 +12,32 @@ use iced::{
 
 use crate::{components::floating_panel::FloatingPanel, theme::AppTheme};
 
-pub fn popover<'a, Message: 'a>(
+pub fn popover<'a, Message: Clone + 'a>(
     theme: &AppTheme,
     trigger: Element<'a, Message>,
     panel: Option<Element<'a, Message>>,
 ) -> Element<'a, Message> {
-    popover_aligned(theme, trigger, panel, Horizontal::Left)
+    popover_aligned(theme, trigger, panel, Horizontal::Left, None)
 }
 
-pub fn popover_aligned<'a, Message: 'a>(
+/// Like [`popover`], but also closes the panel when the user clicks outside
+/// it (the `on_dismiss` message fires on any mouse press beyond the panel's
+/// bounds — typically the same message that toggled it open).
+pub fn popover_dismissable<'a, Message: Clone + 'a>(
+    theme: &AppTheme,
+    trigger: Element<'a, Message>,
+    panel: Option<Element<'a, Message>>,
+    on_dismiss: Message,
+) -> Element<'a, Message> {
+    popover_aligned(theme, trigger, panel, Horizontal::Left, Some(on_dismiss))
+}
+
+pub fn popover_aligned<'a, Message: Clone + 'a>(
     theme: &AppTheme,
     trigger: Element<'a, Message>,
     panel: Option<Element<'a, Message>>,
     align: Horizontal,
+    on_dismiss: Option<Message>,
 ) -> Element<'a, Message> {
     let t = *theme;
     let wrapped = panel.map(|p| {
@@ -44,5 +57,9 @@ pub fn popover_aligned<'a, Message: 'a>(
             .into()
     });
 
-    FloatingPanel::new(trigger, wrapped).align(align).into()
+    let mut fp = FloatingPanel::new(trigger, wrapped).align(align);
+    if let Some(msg) = on_dismiss {
+        fp = fp.on_dismiss(msg);
+    }
+    fp.into()
 }

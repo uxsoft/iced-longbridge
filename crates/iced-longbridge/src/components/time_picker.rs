@@ -10,7 +10,7 @@ use iced::{
 use crate::{
     components::{
         icon::{icon, IconName},
-        popover::popover,
+        popover::popover_dismissable,
     },
     theme::AppTheme,
 };
@@ -20,6 +20,34 @@ use crate::{
 /// Each column shows the current value with a `+` button above and a `−`
 /// button below. Hours wrap 0–23, minutes and seconds wrap 0–59.
 pub fn time_picker<'a, Message: Clone + 'a>(
+    theme: &AppTheme,
+    time: NaiveTime,
+    show_seconds: bool,
+    on_hour: impl Fn(u32) -> Message + 'a + Copy,
+    on_minute: impl Fn(u32) -> Message + 'a + Copy,
+    on_second: impl Fn(u32) -> Message + 'a + Copy,
+) -> Element<'a, Message> {
+    let t = *theme;
+    container(time_picker_inner(theme, time, show_seconds, on_hour, on_minute, on_second))
+        .padding(Padding::from([12.0, 16.0]))
+        .style(move |_| container::Style {
+            background: Some(Background::Color(t.background)),
+            text_color: Some(t.foreground),
+            border: Border {
+                color: t.border,
+                width: 1.0,
+                radius: 8.0.into(),
+            },
+            shadow: Shadow::default(),
+            snap: true,
+        })
+        .into()
+}
+
+/// The picker row without the outer bordered container — used when the caller
+/// (e.g. [`time_picker_popover`]) already wraps the content in a bordered
+/// popover chrome.
+fn time_picker_inner<'a, Message: Clone + 'a>(
     theme: &AppTheme,
     time: NaiveTime,
     show_seconds: bool,
@@ -46,21 +74,7 @@ pub fn time_picker<'a, Message: Clone + 'a>(
         r = r.push(sep(":"));
         r = r.push(spinner(t, time.second(), 60, on_second));
     }
-
-    container(r)
-        .padding(Padding::from([12.0, 16.0]))
-        .style(move |_| container::Style {
-            background: Some(Background::Color(t.background)),
-            text_color: Some(t.foreground),
-            border: Border {
-                color: t.border,
-                width: 1.0,
-                radius: 8.0.into(),
-            },
-            shadow: Shadow::default(),
-            snap: true,
-        })
-        .into()
+    r.into()
 }
 
 /// Button trigger + anchored picker, mirroring [`date_picker`](super::calendar).
@@ -95,7 +109,7 @@ pub fn time_picker_popover<'a, Message: Clone + 'a>(
         .align_y(Vertical::Center),
     )
     .padding(Padding::from([6.0, 12.0]))
-    .on_press(on_toggle)
+    .on_press(on_toggle.clone())
     .style(move |_, status| {
         use button::Status::*;
         let bg = match status {
@@ -117,8 +131,12 @@ pub fn time_picker_popover<'a, Message: Clone + 'a>(
     })
     .into();
 
-    let panel = open.then(|| time_picker(theme, time, show_seconds, on_hour, on_minute, on_second));
-    popover(theme, trigger, panel)
+    let panel = open.then(|| {
+        container(time_picker_inner(theme, time, show_seconds, on_hour, on_minute, on_second))
+            .padding(Padding::from([6.0, 8.0]))
+            .into()
+    });
+    popover_dismissable(theme, trigger, panel, on_toggle)
 }
 
 fn spinner<'a, Message: Clone + 'a>(

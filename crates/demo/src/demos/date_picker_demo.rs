@@ -11,7 +11,7 @@ use crate::{
     components::{
         calendar::calendar,
         icon::{icon, IconName},
-        popover::popover,
+        popover::popover_dismissable,
     },
     demos::common::{section_caption, section_title},
     theme::AppTheme,
@@ -73,7 +73,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     iced::widget::column![
         section_title(theme, "Date picker"),
         section_caption(theme, "Click the field to open the calendar. Pick a day to close it."),
-        popover(theme, trigger, panel),
+        popover_dismissable(theme, trigger, panel, Message::DatePickerToggle),
     ]
     .spacing(10)
     .into()

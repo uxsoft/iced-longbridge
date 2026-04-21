@@ -8,8 +8,7 @@ use iced::{
 use palette::{FromColor, Hsl, IntoColor, Srgb};
 
 use crate::{
-    components::popover::popover,
-    styles,
+    components::popover::popover_dismissable,
     theme::AppTheme,
 };
 
@@ -28,7 +27,7 @@ pub fn color_picker<'a, Message: Clone + 'a>(
     let panel = open.then(|| {
         panel(theme, value, hex_draft, on_change, on_hex_change)
     });
-    popover(theme, trigger, panel)
+    popover_dismissable(theme, trigger, panel, on_toggle)
 }
 
 /// Just the 32×32 colored swatch without any popover behaviour. Useful in
@@ -155,7 +154,9 @@ fn panel<'a, Message: Clone + 'a>(
         row![
             swatch(theme, value),
             container(hex_field).width(Length::Fixed(120.0)),
-            text(format_hex(value)).size(12.0).color(t.muted_foreground),
+            container(text(format_hex(value)).size(12.0).color(t.muted_foreground))
+                .height(Length::Fill)
+                .align_y(Vertical::Center),
         ]
         .spacing(8)
         .align_y(Vertical::Center),
@@ -163,9 +164,8 @@ fn panel<'a, Message: Clone + 'a>(
     .spacing(10);
 
     container(body)
-        .padding(Padding::from([16.0, 16.0]))
+        .padding(Padding::from([10.0, 10.0]))
         .width(Length::Fixed(PANEL_WIDTH))
-        .style(move |_| styles::popover_container(&t, 10.0))
         .into()
 }
 
