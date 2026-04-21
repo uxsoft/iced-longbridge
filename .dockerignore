@@ -1,11 +1,23 @@
 # Compiled artifacts — never needed inside the image
 target/
+**/target/
+dist/
+**/dist/
 
-# Git history
+# Git history and CI config
 .git/
 .gitignore
+.github/
 
 # Editor / IDE
 .idea/
 .vscode/
 *.swp
+*.swo
+
+# Local secrets and caches
+.env
+.env.*
+.DS_Store
+node_modules/
+*.log

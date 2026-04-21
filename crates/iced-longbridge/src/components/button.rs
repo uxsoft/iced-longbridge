@@ -1,11 +1,14 @@
 //! Button component — mirrors gpui-component's Button variants and sizes.
 
 use iced::{
-    Background, Border, Element, Length, Padding, Shadow,
+    Element, Length, Padding,
     widget::{button, text},
 };
 
-use crate::theme::{AppTheme, Size};
+use crate::{
+    styles,
+    theme::{AppTheme, Size},
+};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Variant {
@@ -233,15 +236,5 @@ fn variant_style(
         }
     };
 
-    button::Style {
-        background: bg.map(Background::Color),
-        text_color: fg,
-        border: Border {
-            color: border_color,
-            width: border_width,
-            radius: radius.into(),
-        },
-        shadow: Shadow::default(),
-        snap: true,
-    }
+    styles::button_style(bg, fg, border_color, border_width, radius)
 }

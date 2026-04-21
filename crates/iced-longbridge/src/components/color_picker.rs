@@ -8,9 +8,12 @@ use iced::{
 use palette::{FromColor, Hsl, IntoColor, Srgb};
 
 use crate::{
-    components::{overlay, popover::popover},
+    components::popover::popover,
+    styles,
     theme::AppTheme,
 };
+
+const PANEL_WIDTH: f32 = 280.0;
 
 /// A handful of featured colors shown at the top of the panel.
 pub const DEFAULT_PALETTE: &[Color] = &[
@@ -173,7 +176,11 @@ fn panel<'a, Message: Clone + 'a>(
     ]
     .spacing(10);
 
-    overlay::panel(theme, body.into(), 280.0)
+    container(body)
+        .padding(Padding::from([16.0, 16.0]))
+        .width(Length::Fixed(PANEL_WIDTH))
+        .style(move |_| styles::popover_container(&t, 10.0))
+        .into()
 }
 
 fn labelled_row<'a, Message: 'a>(
@@ -242,5 +249,63 @@ fn hsl_to_color(h: f32, s: f32, l: f32, a: f32) -> Color {
         g: srgb.green.clamp(0.0, 1.0),
         b: srgb.blue.clamp(0.0, 1.0),
         a,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn color_eq(a: Color, b: Color, eps: f32) -> bool {
+        (a.r - b.r).abs() < eps
+            && (a.g - b.g).abs() < eps
+            && (a.b - b.b).abs() < eps
+            && (a.a - b.a).abs() < eps
+    }
+
+    #[test]
+    fn format_hex_round_trip_primaries() {
+        let red = Color::from_rgb(1.0, 0.0, 0.0);
+        assert_eq!(format_hex(red), "#FF0000");
+        assert!(color_eq(parse_hex("#FF0000").unwrap(), red, 1.0 / 255.0));
+
+        let green = Color::from_rgb(0.0, 1.0, 0.0);
+        assert_eq!(format_hex(green), "#00FF00");
+
+        let blue = Color::from_rgb(0.0, 0.0, 1.0);
+        assert_eq!(format_hex(blue), "#0000FF");
+    }
+
+    #[test]
+    fn parse_hex_short_form() {
+        let c = parse_hex("#f0a").unwrap();
+        assert!(color_eq(c, Color::from_rgb(1.0, 0.0, 0xaa as f32 / 255.0), 0.001));
+    }
+
+    #[test]
+    fn parse_hex_tolerates_no_leading_hash() {
+        assert!(parse_hex("00ff00").is_some());
+    }
+
+    #[test]
+    fn parse_hex_rejects_junk() {
+        assert!(parse_hex("").is_none());
+        assert!(parse_hex("#gg00ff").is_none());
+        assert!(parse_hex("#1234").is_none());
+        assert!(parse_hex("not-a-color").is_none());
+    }
+
+    #[test]
+    fn hsl_round_trip_preserves_color() {
+        let original = Color::from_rgb(0.4, 0.7, 0.2);
+        let (h, s, l) = color_to_hsl(original);
+        let back = hsl_to_color(h, s, l, 1.0);
+        assert!(color_eq(original, back, 0.001), "{:?} vs {:?}", original, back);
+    }
+
+    #[test]
+    fn format_hex_clamps_out_of_range() {
+        let c = Color { r: -0.5, g: 1.5, b: 0.5, a: 1.0 };
+        assert_eq!(format_hex(c), "#00FF80");
     }
 }

@@ -14,6 +14,10 @@ use crate::{
     theme::AppTheme,
 };
 
+/// Width of iced's default vertical scrollbar (matches `scrollable::Scrollbar`
+/// `width` + `margin`). Kept in sync so header/body columns stay aligned.
+const SCROLLBAR_WIDTH: f32 = 10.0;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortDir {
     Asc,
@@ -156,8 +160,11 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
 
         header = header.push(cell_el);
     }
+    // Reserve the vertical scrollbar's width on the right so header columns
+    // line up with body columns once the scrollable steals 10px for its track.
     let header_bar = container(header)
         .width(Length::Fill)
+        .padding(Padding::default().right(SCROLLBAR_WIDTH))
         .style(move |_| container::Style {
             background: Some(Background::Color(t.muted)),
             text_color: Some(t.muted_foreground),

@@ -56,11 +56,16 @@ pub fn to_markdown(html: &str) -> String {
                 }
                 "a" => {
                     out.push('[');
-                    // href resolved on close
+                    // href resolved on close. Only http/https/mailto/# schemes are
+                    // forwarded — javascript:, data:, file: and friends are dropped
+                    // so a malicious host can't smuggle active content through the
+                    // link click handler.
                     tokens.pending_href = attrs
                         .iter()
                         .find(|(k, _)| k == "href")
-                        .map(|(_, v)| v.clone());
+                        .map(|(_, v)| v.as_str())
+                        .and_then(sanitize_href)
+                        .map(str::to_owned);
                 }
                 _ => {}
             },
@@ -262,4 +267,105 @@ fn decode_entities(s: &str) -> String {
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
         .replace("&nbsp;", " ")
+}
+
+/// Only forward anchor hrefs whose scheme we trust. Fragment-only links (`#id`)
+/// and scheme-less relative links are also allowed — everything else (notably
+/// `javascript:`, `data:`, `file:`, `vbscript:`) is dropped.
+pub(crate) fn sanitize_href(href: &str) -> Option<&str> {
+    let trimmed = href.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.starts_with('#') || trimmed.starts_with('/') {
+        return Some(trimmed);
+    }
+    // A scheme is ASCII-alpha followed by alnum/+/-/. and then ':'. If there's
+    // no ':' before the first '/', '?', or '#' we treat it as relative.
+    let scheme_end = trimmed.find(|c: char| !c.is_ascii_alphanumeric() && c != '+' && c != '-' && c != '.');
+    match scheme_end {
+        Some(i) if trimmed.as_bytes()[i] == b':' => {
+            let scheme = trimmed[..i].to_ascii_lowercase();
+            if matches!(scheme.as_str(), "http" | "https" | "mailto" | "tel") {
+                Some(trimmed)
+            } else {
+                None
+            }
+        }
+        // No scheme delimiter before a path/query/fragment → relative URL.
+        _ => Some(trimmed),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sanitize_allows_common_schemes() {
+        assert_eq!(sanitize_href("https://example.com"), Some("https://example.com"));
+        assert_eq!(sanitize_href("http://example.com"), Some("http://example.com"));
+        assert_eq!(sanitize_href("mailto:a@b.c"), Some("mailto:a@b.c"));
+        assert_eq!(sanitize_href("tel:+1-555"), Some("tel:+1-555"));
+    }
+
+    #[test]
+    fn sanitize_allows_relative_and_fragment() {
+        assert_eq!(sanitize_href("#section"), Some("#section"));
+        assert_eq!(sanitize_href("/path/to/thing"), Some("/path/to/thing"));
+        assert_eq!(sanitize_href("page.html"), Some("page.html"));
+        assert_eq!(sanitize_href("a/b"), Some("a/b"));
+        assert_eq!(sanitize_href("?q=1"), Some("?q=1"));
+    }
+
+    #[test]
+    fn sanitize_blocks_active_schemes() {
+        assert_eq!(sanitize_href("javascript:alert(1)"), None);
+        assert_eq!(sanitize_href("JavaScript:alert(1)"), None);
+        assert_eq!(sanitize_href("  javascript:alert(1)"), None);
+        assert_eq!(sanitize_href("data:text/html,<script>"), None);
+        assert_eq!(sanitize_href("vbscript:msgbox"), None);
+        assert_eq!(sanitize_href("file:///etc/passwd"), None);
+    }
+
+    #[test]
+    fn sanitize_blocks_empty() {
+        assert_eq!(sanitize_href(""), None);
+        assert_eq!(sanitize_href("   "), None);
+    }
+
+    #[test]
+    fn to_markdown_drops_dangerous_href() {
+        let md = to_markdown(r#"<a href="javascript:alert(1)">click</a>"#);
+        assert!(md.contains("[click]()"), "got: {}", md);
+    }
+
+    #[test]
+    fn to_markdown_preserves_safe_href() {
+        let md = to_markdown(r#"<a href="https://example.com">click</a>"#);
+        assert!(md.contains("[click](https://example.com)"), "got: {}", md);
+    }
+
+    #[test]
+    fn to_markdown_lists_and_headings() {
+        let md = to_markdown("<h1>hi</h1><ul><li>a</li><li>b</li></ul>");
+        assert!(md.contains("# hi"));
+        assert!(md.contains("- a"));
+        assert!(md.contains("- b"));
+    }
+
+    #[test]
+    fn decode_entities_handles_basics() {
+        assert_eq!(decode_entities("a &amp; b"), "a & b");
+        assert_eq!(decode_entities("&lt;tag&gt;"), "<tag>");
+        assert_eq!(decode_entities("x&nbsp;y"), "x y");
+    }
+
+    #[test]
+    fn tokenizer_handles_void_elements() {
+        let md = to_markdown("line1<br>line2<hr>end");
+        assert!(md.contains("line1"));
+        assert!(md.contains("line2"));
+        assert!(md.contains("---"));
+    }
 }

@@ -9,7 +9,7 @@
 //!    page in the configured corner.
 
 use iced::{
-    Background, Border, Color, Element, Length, Padding, Shadow, Vector,
+    Background, Border, Color, Element, Length, Padding, Shadow,
     alignment::{Horizontal, Vertical},
     widget::{button, column, container, row, text, Space},
 };
@@ -19,6 +19,7 @@ use crate::{
         icon::{icon_colored, IconName},
         overlay,
     },
+    styles,
     theme::AppTheme,
 };
 
@@ -210,22 +211,69 @@ fn toast<'a, Message: Clone + 'a>(
     container(body)
         .padding(Padding::from([10.0, 12.0]))
         .width(Length::Fixed(320.0))
-        .style(move |_| container::Style {
-            background: Some(Background::Color(t.popover)),
-            text_color: Some(t.popover_foreground),
-            border: Border {
-                color: accent,
-                width: 1.0,
-                radius: 8.0.into(),
-            },
-            shadow: Shadow {
-                color: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
-                offset: Vector::new(0.0, 4.0),
-                blur_radius: 14.0,
-            },
-            snap: true,
-        })
+        .style(move |_| styles::popover_container_accent(&t, accent, 8.0))
         .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn n(id: u64, ttl: i64) -> Notification {
+        Notification::new(id, NotificationKind::Info, "t").ttl_ms(ttl)
+    }
+
+    #[test]
+    fn push_replaces_existing_id() {
+        let mut list = NotificationList::new();
+        list.push(n(1, 1_000));
+        list.push(n(2, 1_000));
+        list.push(n(1, 500));
+        assert_eq!(list.items.len(), 2);
+        // Re-pushed id 1 ends up at the tail.
+        assert_eq!(list.items.last().unwrap().id, 1);
+        assert_eq!(list.items.last().unwrap().remaining_ms, 500);
+    }
+
+    #[test]
+    fn push_respects_max_items() {
+        let mut list = NotificationList::new();
+        for i in 0..10 {
+            list.push(n(i, 1_000));
+        }
+        assert_eq!(list.items.len(), list.max_items);
+        // Oldest ids drained from the front.
+        assert_eq!(list.items.first().unwrap().id, 10 - list.max_items as u64);
+    }
+
+    #[test]
+    fn tick_expires_entries() {
+        let mut list = NotificationList::new();
+        list.push(n(1, 100));
+        list.push(n(2, 500));
+        list.tick(200);
+        assert_eq!(list.items.len(), 1);
+        assert_eq!(list.items[0].id, 2);
+    }
+
+    #[test]
+    fn sticky_never_expires() {
+        let mut list = NotificationList::new();
+        list.push(Notification::new(1, NotificationKind::Info, "x").sticky());
+        list.tick(1_000_000);
+        assert_eq!(list.items.len(), 1);
+        assert_eq!(list.items[0].remaining_ms, 0);
+    }
+
+    #[test]
+    fn dismiss_removes_by_id() {
+        let mut list = NotificationList::new();
+        list.push(n(1, 1_000));
+        list.push(n(2, 1_000));
+        list.dismiss(1);
+        assert_eq!(list.items.len(), 1);
+        assert_eq!(list.items[0].id, 2);
+    }
 }
 
 fn close_button<'a, Message: Clone + 'a>(
