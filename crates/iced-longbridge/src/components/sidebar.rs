@@ -164,6 +164,7 @@ impl<'a, Message: Clone + 'a> Sidebar<'a, Message> {
     }
 
     pub fn view(self, theme: &AppTheme) -> Element<'a, Message> {
+        // Temporary: ignore collapsed/on_toggle fields; next task implements them.
         let t = *theme;
         let collapsed = self.collapsed;
         let effective_width = if collapsed { COLLAPSED_WIDTH } else { self.width };
