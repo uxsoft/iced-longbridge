@@ -141,7 +141,6 @@ pub fn menu<'a, Message: Clone + 'a>(
     }
 
     container(c)
-        .padding(Padding::from(4.0))
         .width(Length::Fixed(220.0))
         .into()
 }

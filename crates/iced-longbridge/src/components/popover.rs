@@ -5,12 +5,36 @@
 //! button, time/date pickers, and the color picker.
 
 use iced::{
-    Background, Border, Element, Padding, Shadow,
+    Background, Border, Element, Shadow,
     alignment::Horizontal,
     widget::container,
 };
 
 use crate::{components::floating_panel::FloatingPanel, theme::AppTheme};
+
+/// Renders `content` inside the shared styled popover box (popover bg, 1px
+/// border, 8px radius, shadow, no padding). Used by every menu-style popover
+/// (menu bar, dropdown, context menu) and by the time/date/color pickers via
+/// [`popover_aligned`].
+pub fn popover_panel<'a, Message: 'a>(
+    theme: &AppTheme,
+    content: Element<'a, Message>,
+) -> Element<'a, Message> {
+    let t = *theme;
+    container(content)
+        .style(move |_| container::Style {
+            background: Some(Background::Color(t.popover)),
+            text_color: Some(t.popover_foreground),
+            border: Border {
+                color: t.border,
+                width: 1.0,
+                radius: 8.0.into(),
+            },
+            shadow: Shadow::default(),
+            snap: true,
+        })
+        .into()
+}
 
 pub fn popover<'a, Message: Clone + 'a>(
     theme: &AppTheme,
@@ -39,23 +63,7 @@ pub fn popover_aligned<'a, Message: Clone + 'a>(
     align: Horizontal,
     on_dismiss: Option<Message>,
 ) -> Element<'a, Message> {
-    let t = *theme;
-    let wrapped = panel.map(|p| {
-        container(p)
-            .padding(Padding::from([6.0, 8.0]))
-            .style(move |_| container::Style {
-                background: Some(Background::Color(t.popover)),
-                text_color: Some(t.popover_foreground),
-                border: Border {
-                    color: t.border,
-                    width: 1.0,
-                    radius: 8.0.into(),
-                },
-                shadow: Shadow::default(),
-                snap: true,
-            })
-            .into()
-    });
+    let wrapped = panel.map(|p| popover_panel(theme, p));
 
     let mut fp = FloatingPanel::new(trigger, wrapped).align(align);
     if let Some(msg) = on_dismiss {
