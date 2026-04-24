@@ -50,10 +50,10 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
 
     let ctx = ContextMenu::new(target, items).view(theme);
 
-    let last = if state.last_action.is_empty() {
-        String::from("Last action: (none yet)")
-    } else {
+    let last = if state.last_action.starts_with("Menu: ") {
         format!("Last action: {}", state.last_action)
+    } else {
+        String::from("Last action: (right-click to open the menu)")
     };
 
     column![
