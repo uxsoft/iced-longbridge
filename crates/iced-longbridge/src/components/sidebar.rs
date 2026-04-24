@@ -95,23 +95,40 @@ impl<'a, Message> Default for Group<'a, Message> {
 
 pub struct Sidebar<'a, Message> {
     header: Option<Element<'a, Message>>,
+    #[allow(dead_code)]
+    header_collapsed: Option<Element<'a, Message>>,
     groups: Vec<Group<'a, Message>>,
     footer: Option<Element<'a, Message>>,
+    #[allow(dead_code)]
+    footer_collapsed: Option<Element<'a, Message>>,
     width: f32,
+    #[allow(dead_code)]
+    collapsed: bool,
+    #[allow(dead_code)]
+    on_toggle: Option<Message>,
 }
 
 impl<'a, Message: Clone + 'a> Sidebar<'a, Message> {
     pub fn new() -> Self {
         Self {
             header: None,
+            header_collapsed: None,
             groups: Vec::new(),
             footer: None,
+            footer_collapsed: None,
             width: 240.0,
+            collapsed: false,
+            on_toggle: None,
         }
     }
 
     pub fn header(mut self, el: Element<'a, Message>) -> Self {
         self.header = Some(el);
+        self
+    }
+
+    pub fn header_collapsed(mut self, el: Element<'a, Message>) -> Self {
+        self.header_collapsed = Some(el);
         self
     }
 
@@ -125,12 +142,28 @@ impl<'a, Message: Clone + 'a> Sidebar<'a, Message> {
         self
     }
 
+    pub fn footer_collapsed(mut self, el: Element<'a, Message>) -> Self {
+        self.footer_collapsed = Some(el);
+        self
+    }
+
     pub fn width(mut self, w: f32) -> Self {
         self.width = w;
         self
     }
 
+    pub fn collapsed(mut self, c: bool) -> Self {
+        self.collapsed = c;
+        self
+    }
+
+    pub fn on_toggle(mut self, msg: Message) -> Self {
+        self.on_toggle = Some(msg);
+        self
+    }
+
     pub fn view(self, theme: &AppTheme) -> Element<'a, Message> {
+        // Temporary: ignore collapsed/on_toggle fields; next task implements them.
         let t = *theme;
 
         let mut col = column![].spacing(12).padding(Padding::from([14.0, 10.0]));
