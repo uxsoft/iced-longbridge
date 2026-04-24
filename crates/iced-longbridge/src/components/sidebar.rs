@@ -93,59 +93,97 @@ impl<'a, Message> Default for Group<'a, Message> {
     }
 }
 
-pub fn sidebar<'a, Message: Clone + 'a>(
-    theme: &AppTheme,
+pub struct Sidebar<'a, Message> {
     header: Option<Element<'a, Message>>,
     groups: Vec<Group<'a, Message>>,
     footer: Option<Element<'a, Message>>,
     width: f32,
-) -> Element<'a, Message> {
-    let t = *theme;
+}
 
-    let mut col = column![].spacing(12).padding(Padding::from([14.0, 10.0]));
-    if let Some(h) = header {
-        col = col.push(h);
-    }
-    for g in groups {
-        col = col.push(render_group(theme, g));
-    }
-    let body = scrollable(col).height(Length::Fill);
-
-    let mut outer = column![body].width(Length::Fill).height(Length::Fill);
-    if let Some(f) = footer {
-        outer = outer.push(
-            container(f)
-                .padding(Padding::from([12.0, 14.0]))
-                .width(Length::Fill)
-                .style(move |_| container::Style {
-                    background: Some(Background::Color(t.sidebar)),
-                    text_color: Some(t.sidebar_foreground),
-                    border: Border {
-                        color: t.sidebar_border,
-                        width: 1.0,
-                        radius: 0.0.into(),
-                    },
-                    shadow: Shadow::default(),
-                    snap: true,
-                }),
-        );
+impl<'a, Message: Clone + 'a> Sidebar<'a, Message> {
+    pub fn new() -> Self {
+        Self {
+            header: None,
+            groups: Vec::new(),
+            footer: None,
+            width: 240.0,
+        }
     }
 
-    container(outer)
-        .width(Length::Fixed(width))
-        .height(Length::Fill)
-        .style(move |_| container::Style {
-            background: Some(Background::Color(t.sidebar)),
-            text_color: Some(t.sidebar_foreground),
-            border: Border {
-                color: t.sidebar_border,
-                width: 0.0,
-                radius: 0.0.into(),
-            },
-            shadow: Shadow::default(),
-            snap: true,
-        })
-        .into()
+    pub fn header(mut self, el: Element<'a, Message>) -> Self {
+        self.header = Some(el);
+        self
+    }
+
+    pub fn push(mut self, group: Group<'a, Message>) -> Self {
+        self.groups.push(group);
+        self
+    }
+
+    pub fn footer(mut self, el: Element<'a, Message>) -> Self {
+        self.footer = Some(el);
+        self
+    }
+
+    pub fn width(mut self, w: f32) -> Self {
+        self.width = w;
+        self
+    }
+
+    pub fn view(self, theme: &AppTheme) -> Element<'a, Message> {
+        let t = *theme;
+
+        let mut col = column![].spacing(12).padding(Padding::from([14.0, 10.0]));
+        if let Some(h) = self.header {
+            col = col.push(h);
+        }
+        for g in self.groups {
+            col = col.push(render_group(theme, g));
+        }
+        let body = scrollable(col).height(Length::Fill);
+
+        let mut outer = column![body].width(Length::Fill).height(Length::Fill);
+        if let Some(f) = self.footer {
+            outer = outer.push(
+                container(f)
+                    .padding(Padding::from([12.0, 14.0]))
+                    .width(Length::Fill)
+                    .style(move |_| container::Style {
+                        background: Some(Background::Color(t.sidebar)),
+                        text_color: Some(t.sidebar_foreground),
+                        border: Border {
+                            color: t.sidebar_border,
+                            width: 1.0,
+                            radius: 0.0.into(),
+                        },
+                        shadow: Shadow::default(),
+                        snap: true,
+                    }),
+            );
+        }
+
+        container(outer)
+            .width(Length::Fixed(self.width))
+            .height(Length::Fill)
+            .style(move |_| container::Style {
+                background: Some(Background::Color(t.sidebar)),
+                text_color: Some(t.sidebar_foreground),
+                border: Border {
+                    color: t.sidebar_border,
+                    width: 0.0,
+                    radius: 0.0.into(),
+                },
+                shadow: Shadow::default(),
+                snap: true,
+            })
+            .into()
+    }
+}
+
+impl<'a, Message: Clone + 'a> Default for Sidebar<'a, Message> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 fn render_group<'a, Message: Clone + 'a>(
