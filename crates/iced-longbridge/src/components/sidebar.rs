@@ -106,7 +106,6 @@ pub struct Sidebar<'a, Message> {
     footer_collapsed: Option<Element<'a, Message>>,
     width: f32,
     collapsed: bool,
-    #[allow(dead_code)]
     on_toggle: Option<Message>,
 }
 
@@ -206,9 +205,20 @@ impl<'a, Message: Clone + 'a> Sidebar<'a, Message> {
         let mut outer = column![body].width(Length::Fill).height(Length::Fill);
 
         let footer_el = if collapsed { self.footer_collapsed } else { self.footer };
-        if let Some(f) = footer_el {
+        let toggle_el = self
+            .on_toggle
+            .map(|msg| render_toggle(theme, collapsed, msg));
+
+        if footer_el.is_some() || toggle_el.is_some() {
+            let mut footer_col = column![].spacing(8);
+            if let Some(f) = footer_el {
+                footer_col = footer_col.push(f);
+            }
+            if let Some(t_el) = toggle_el {
+                footer_col = footer_col.push(t_el);
+            }
             outer = outer.push(
-                container(f)
+                container(footer_col)
                     .padding(Padding::from([12.0, if collapsed { 6.0 } else { 14.0 }]))
                     .width(Length::Fill)
                     .style(move |_| container::Style {
@@ -438,4 +448,63 @@ fn render_item_collapsed<'a, Message: Clone + 'a>(
         .width(Length::Fill)
         .align_x(Horizontal::Center)
         .into()
+}
+
+fn render_toggle<'a, Message: Clone + 'a>(
+    theme: &AppTheme,
+    collapsed: bool,
+    on_toggle: Message,
+) -> Element<'a, Message> {
+    let t = *theme;
+
+    let btn: Element<'a, Message> = if collapsed {
+        let icon_slot = container(icon(theme, IconName::ChevronRight, 16.0))
+            .width(Length::Fixed(40.0))
+            .height(Length::Fixed(40.0))
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center);
+        let raw = button(icon_slot)
+            .padding(Padding::from([0.0, 0.0]))
+            .on_press(on_toggle)
+            .style(move |_, status| toggle_style(&t, status));
+        tooltip_wrap(theme, raw.into(), "Expand").into()
+    } else {
+        let inner = row![
+            icon(theme, IconName::ChevronLeft, 14.0),
+            text("Collapse").size(13.0).color(t.sidebar_foreground),
+        ]
+        .spacing(10)
+        .align_y(Vertical::Center);
+        button(inner)
+            .padding(Padding::from([6.0, 10.0]))
+            .width(Length::Fill)
+            .on_press(on_toggle)
+            .style(move |_, status| toggle_style(&t, status))
+            .into()
+    };
+
+    container(btn)
+        .width(Length::Fill)
+        .align_x(Horizontal::Center)
+        .into()
+}
+
+fn toggle_style(t: &AppTheme, status: button::Status) -> button::Style {
+    use button::Status::*;
+    let bg = match status {
+        Hovered => t.accent,
+        Pressed => t.muted,
+        _ => Color::TRANSPARENT,
+    };
+    button::Style {
+        background: Some(Background::Color(bg)),
+        text_color: t.sidebar_foreground,
+        border: Border {
+            color: Color::TRANSPARENT,
+            width: 0.0,
+            radius: 6.0.into(),
+        },
+        shadow: Shadow::default(),
+        snap: true,
+    }
 }
