@@ -328,22 +328,14 @@ fn render_item<'a, Message: Clone + 'a>(
                     match status {
                         Hovered => (t.accent, t.foreground),
                         Pressed => (t.muted, t.foreground),
-<<<<<<< HEAD
                         _ => (Color::TRANSPARENT, t.sidebar_foreground),
-=======
-                        _ => (iced::Color::TRANSPARENT, t.sidebar_foreground),
->>>>>>> 4f5b174 (feat(sidebar): render collapsed icon-only rail)
                     }
                 };
                 button::Style {
                     background: Some(Background::Color(bg)),
                     text_color: fg,
                     border: Border {
-<<<<<<< HEAD
                         color: Color::TRANSPARENT,
-=======
-                        color: iced::Color::TRANSPARENT,
->>>>>>> 4f5b174 (feat(sidebar): render collapsed icon-only rail)
                         width: 0.0,
                         radius: 6.0.into(),
                     },
