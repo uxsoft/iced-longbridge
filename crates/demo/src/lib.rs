@@ -225,6 +225,7 @@ pub enum Message {
     ResizableResized(pane_grid::ResizeEvent),
     DockTabSelected(usize, usize),
     DockResized(pane_grid::ResizeEvent),
+    SidebarDemoToggle,
 
     // Form / menu (Phase 2)
     SelectFruit(&'static str),
@@ -302,6 +303,7 @@ pub struct State {
     pub dialog_open: Option<crate::demos::dialog_demo::DialogKind>,
     pub resizable_state: pane_grid::State<String>,
     pub dock_state: pane_grid::State<DockPaneData>,
+    pub sidebar_demo_collapsed: bool,
 
     // Demo state — form / menu
     pub select_fruit: Option<&'static str>,
@@ -407,6 +409,7 @@ impl Default for State {
             dialog_open: None,
             resizable_state,
             dock_state,
+            sidebar_demo_collapsed: false,
             select_fruit: None,
             combobox_state: combo_box::State::new(crate::demos::select_demo::FRUITS.to_vec()),
             combobox_value: None,
@@ -560,6 +563,9 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
             }
         }
         Message::DockResized(event) => state.dock_state.resize(event.split, event.ratio),
+        Message::SidebarDemoToggle => {
+            state.sidebar_demo_collapsed = !state.sidebar_demo_collapsed;
+        }
         Message::SelectFruit(v) => {
             state.select_fruit = Some(v);
             state.last_action = format!("Select: {v}");
@@ -935,7 +941,7 @@ fn build_content<'a>(state: &'a State) -> Element<'a, Message> {
         Page::Dialog => demos::dialog_demo::view(state, t),
         Page::Resizable => demos::resizable_demo::view(state, t),
         Page::Dock => demos::dock_demo::view(state, t),
-        Page::Sidebar => demos::sidebar_demo::view(t),
+        Page::Sidebar => demos::sidebar_demo::view(state, t),
         Page::Select => demos::select_demo::view(state, t),
         Page::NumberInput => demos::number_input_demo::view(state, t),
         Page::OtpInput => demos::otp_input_demo::view(state, t),

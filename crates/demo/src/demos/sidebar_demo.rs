@@ -4,18 +4,21 @@ use iced::{
 };
 
 use crate::{
-    Message,
+    Message, State,
     components::{
-        icon::IconName,
+        icon::{icon, IconName},
         sidebar::{Group, Item, Sidebar},
     },
     demos::common::section_title,
     theme::AppTheme,
 };
 
-pub fn view<'a>(theme: &AppTheme) -> Element<'a, Message> {
+pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
+    let collapsed = state.sidebar_demo_collapsed;
+
     let nav: Element<'a, Message> = Sidebar::new()
         .header(text("Workspace").size(14.0).color(theme.foreground).into())
+        .header_collapsed(icon(theme, IconName::Home, 20.0))
         .push(
             Group::new()
                 .label("Inbox")
@@ -37,7 +40,10 @@ pub fn view<'a>(theme: &AppTheme) -> Element<'a, Message> {
                 .push(Item::new("Sign out").icon(IconName::Unlock).on_press(Message::NoOp)),
         )
         .footer(text("v0.1.0").size(11.0).color(theme.muted_foreground).into())
+        .footer_collapsed(text("v0.1").size(10.0).color(theme.muted_foreground).into())
         .width(240.0)
+        .collapsed(collapsed)
+        .on_toggle(Message::SidebarDemoToggle)
         .view(theme);
 
     let preview = container(row![nav, text("Main content area").size(14.0).color(theme.muted_foreground)])
