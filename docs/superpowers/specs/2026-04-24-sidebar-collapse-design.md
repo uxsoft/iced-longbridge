@@ -20,7 +20,7 @@ The `sidebar` component in `crates/iced-longbridge/src/components/sidebar.rs` is
 
 ## API
 
-Replace the positional-arg `sidebar(...)` function with a builder struct. Two call sites exist (`crates/demo/src/demos/sidebar_demo.rs` and the showcase nav in `crates/demo/src/lib.rs`); both are updated.
+Replace the positional-arg `sidebar(...)` function with a builder struct. The only call site is `crates/demo/src/demos/sidebar_demo.rs`; it is updated to the new builder. (The main showcase nav in `crates/demo/src/lib.rs` builds its own inline column of buttons and does not use the reusable component.)
 
 ```rust
 pub struct Sidebar<'a, Message> {
