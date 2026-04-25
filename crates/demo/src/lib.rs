@@ -66,6 +66,7 @@ pub enum Page {
     GroupBox,
     TitleBar,
     MenuBar,
+    ContextMenu,
     Dialog,
     Resizable,
     Dock,
@@ -155,6 +156,7 @@ impl Page {
         (Page::GroupBox, "Group box", Category::Layout),
         (Page::TitleBar, "Title bar", Category::Layout),
         (Page::MenuBar, "Menu bar", Category::Layout),
+        (Page::ContextMenu, "Context menu", Category::Layout),
         (Page::Dialog, "Dialog", Category::Layout),
         (Page::Resizable, "Resizable", Category::Layout),
         (Page::Dock, "Dock", Category::Layout),
@@ -225,6 +227,7 @@ pub enum Message {
     ResizableResized(pane_grid::ResizeEvent),
     DockTabSelected(usize, usize),
     DockResized(pane_grid::ResizeEvent),
+    SidebarDemoToggle,
 
     // Form / menu (Phase 2)
     SelectFruit(&'static str),
@@ -302,6 +305,7 @@ pub struct State {
     pub dialog_open: Option<crate::demos::dialog_demo::DialogKind>,
     pub resizable_state: pane_grid::State<String>,
     pub dock_state: pane_grid::State<DockPaneData>,
+    pub sidebar_demo_collapsed: bool,
 
     // Demo state — form / menu
     pub select_fruit: Option<&'static str>,
@@ -407,6 +411,7 @@ impl Default for State {
             dialog_open: None,
             resizable_state,
             dock_state,
+            sidebar_demo_collapsed: false,
             select_fruit: None,
             combobox_state: combo_box::State::new(crate::demos::select_demo::FRUITS.to_vec()),
             combobox_value: None,
@@ -560,6 +565,9 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
             }
         }
         Message::DockResized(event) => state.dock_state.resize(event.split, event.ratio),
+        Message::SidebarDemoToggle => {
+            state.sidebar_demo_collapsed = !state.sidebar_demo_collapsed;
+        }
         Message::SelectFruit(v) => {
             state.select_fruit = Some(v);
             state.last_action = format!("Select: {v}");
@@ -932,10 +940,11 @@ fn build_content<'a>(state: &'a State) -> Element<'a, Message> {
         Page::GroupBox => demos::group_box_demo::view(t),
         Page::TitleBar => demos::title_bar_demo::view(t),
         Page::MenuBar => demos::menu_bar_demo::view(state, t),
+        Page::ContextMenu => demos::context_menu_demo::view(state, t),
         Page::Dialog => demos::dialog_demo::view(state, t),
         Page::Resizable => demos::resizable_demo::view(state, t),
         Page::Dock => demos::dock_demo::view(state, t),
-        Page::Sidebar => demos::sidebar_demo::view(t),
+        Page::Sidebar => demos::sidebar_demo::view(state, t),
         Page::Select => demos::select_demo::view(state, t),
         Page::NumberInput => demos::number_input_demo::view(state, t),
         Page::OtpInput => demos::otp_input_demo::view(state, t),
@@ -1017,6 +1026,7 @@ fn page_description(page: Page) -> &'static str {
         Page::GroupBox => "Titled, bordered container.",
         Page::TitleBar => "App chrome with title and window controls.",
         Page::MenuBar => "Horizontal strip of labeled menus — desktop app chrome.",
+        Page::ContextMenu => "Right-click anywhere in the child to open a menu at the cursor.",
         Page::Dialog => "Modal dialog with variants and actions.",
         Page::Resizable => "Pane grid with draggable splitters.",
         Page::Dock => "Tabbed panels arranged in a pane grid.",

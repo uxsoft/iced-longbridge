@@ -15,8 +15,8 @@ use crate::{
     components::{
         floating_panel::FloatingPanel,
         menu::{menu, Item},
+        popover::popover_panel,
     },
-    styles,
     theme::AppTheme,
 };
 
@@ -58,12 +58,7 @@ pub fn menu_bar<'a, Message: Clone + 'a>(
             trigger = mouse_area(trigger).on_enter(m.on_toggle).into();
         }
 
-        let panel = is_open.then(|| {
-            container(menu(theme, m.items))
-                .padding(Padding::from([6.0, 8.0]))
-                .style(move |_| styles::popover_container(&t, 8.0))
-                .into()
-        });
+        let panel = is_open.then(|| popover_panel(theme, menu(theme, m.items)));
         bar = bar.push(FloatingPanel::new(trigger, panel).flip(false));
     }
 
