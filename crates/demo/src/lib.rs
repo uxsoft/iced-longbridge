@@ -16,11 +16,19 @@ use chrono::{Datelike, NaiveDate, Timelike};
 use iced::{
     Background, Border, Element, Length, Padding, Shadow, Subscription, Task, Theme,
     alignment::{Horizontal, Vertical},
+    keyboard::{self, key::Named, Key},
     widget::{button, column, combo_box, container, pane_grid, row, scrollable, text, Space},
 };
 
 use crate::{
-    components::{button::{button_ex, Variant}, divider, icon::{icon, IconName}, sheet::Side as SheetSide},
+    components::{
+        button::{button_ex, Variant},
+        command_palette::{self, command_palette, PaletteItem},
+        divider,
+        icon::{icon, IconName},
+        kbd::combo,
+        sheet::Side as SheetSide,
+    },
     theme::{AppTheme, Appearance, Size},
 };
 
@@ -32,6 +40,7 @@ pub enum Page {
     // Basic
     Button,
     Input,
+    CommandPalette,
     Checkbox,
     Radio,
     Switch,
@@ -122,6 +131,7 @@ impl Page {
         // Basic
         (Page::Button, "Button", Category::Basic),
         (Page::Input, "Input", Category::Basic),
+        (Page::CommandPalette, "Command palette", Category::Basic),
         (Page::Checkbox, "Checkbox", Category::Basic),
         (Page::Radio, "Radio", Category::Basic),
         (Page::Switch, "Switch", Category::Basic),
@@ -197,6 +207,14 @@ pub enum Message {
     PageSelected(Page),
     ThemeToggle,
     Tick,
+
+    // Command palette
+    CommandPaletteOpen,
+    CommandPaletteClose,
+    CommandPaletteQueryChanged(String),
+    CommandPaletteMoveSelection(i32),
+    CommandPaletteConfirm,
+    CommandPaletteSelectIndex(usize),
 
     // Component demos (basic)
     ButtonPressed(String),
@@ -294,6 +312,11 @@ pub struct State {
     pub progress_value: f32,
     pub last_action: String,
     pub tick_rotation: f32,
+
+    // Command palette
+    pub command_palette_open: bool,
+    pub command_palette_query: String,
+    pub command_palette_selected: usize,
 
     // Demo state — layout
     pub accordion_open: [bool; 3],
@@ -402,6 +425,9 @@ impl Default for State {
             progress_value: 60.0,
             last_action: String::from("—"),
             tick_rotation: 0.0,
+            command_palette_open: false,
+            command_palette_query: String::new(),
+            command_palette_selected: 0,
             accordion_open: [true, false, false],
             collapsible_open: false,
             tabs_selected: 0,
@@ -501,8 +527,38 @@ pub fn theme(state: &State) -> Theme {
     state.theme.iced_theme()
 }
 
+fn filtered_pages(query: &str) -> Vec<(Page, &'static str, Category)> {
+    let q = query.trim().to_lowercase();
+    Page::ALL
+        .iter()
+        .copied()
+        .filter(|(_, label, _)| q.is_empty() || label.to_lowercase().contains(&q))
+        .collect()
+}
+
 pub fn subscription(_state: &State) -> Subscription<Message> {
-    iced::time::every(Duration::from_millis(32)).map(|_| Message::Tick)
+    let tick = iced::time::every(Duration::from_millis(32)).map(|_| Message::Tick);
+    let keys = iced::keyboard::listen().filter_map(|event| match event {
+        keyboard::Event::KeyPressed { key, modifiers, .. } => {
+            if modifiers.command()
+                && let Key::Character(c) = &key
+                && c.as_str().eq_ignore_ascii_case("k")
+            {
+                return Some(Message::CommandPaletteOpen);
+            }
+            if let Key::Named(n) = &key {
+                return match n {
+                    Named::Escape => Some(Message::CommandPaletteClose),
+                    Named::ArrowDown => Some(Message::CommandPaletteMoveSelection(1)),
+                    Named::ArrowUp => Some(Message::CommandPaletteMoveSelection(-1)),
+                    _ => None,
+                };
+            }
+            None
+        }
+        _ => None,
+    });
+    Subscription::batch([tick, keys])
 }
 
 pub fn update(state: &mut State, message: Message) -> Task<Message> {
@@ -727,6 +783,50 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
         Message::HtmlLinkClicked(url) => state.last_action = format!("HTML link: {url}"),
         Message::CodeEditorAction(action) => state.code_editor_content.perform(action),
         Message::CodeEditorLanguage(lang) => state.code_editor_language = lang,
+        Message::CommandPaletteOpen => {
+            if state.command_palette_open {
+                state.command_palette_open = false;
+            } else {
+                state.command_palette_open = true;
+                state.command_palette_query.clear();
+                state.command_palette_selected = 0;
+                return command_palette::focus_input();
+            }
+        }
+        Message::CommandPaletteClose => {
+            state.command_palette_open = false;
+        }
+        Message::CommandPaletteQueryChanged(q) => {
+            state.command_palette_query = q;
+            state.command_palette_selected = 0;
+        }
+        Message::CommandPaletteMoveSelection(delta) => {
+            if !state.command_palette_open {
+                return Task::none();
+            }
+            let n = filtered_pages(&state.command_palette_query).len();
+            if n > 0 {
+                let i = state.command_palette_selected as i32;
+                let next = (i + delta).rem_euclid(n as i32);
+                state.command_palette_selected = next as usize;
+            }
+        }
+        Message::CommandPaletteConfirm => {
+            if state.command_palette_open {
+                let pages = filtered_pages(&state.command_palette_query);
+                if let Some((page, _, _)) = pages.get(state.command_palette_selected) {
+                    state.page = *page;
+                }
+                state.command_palette_open = false;
+            }
+        }
+        Message::CommandPaletteSelectIndex(i) => {
+            let pages = filtered_pages(&state.command_palette_query);
+            if let Some((page, _, _)) = pages.get(i) {
+                state.page = *page;
+            }
+            state.command_palette_open = false;
+        }
         Message::NoOp => {}
     }
     Task::none()
@@ -741,6 +841,8 @@ pub fn view(state: &State) -> Element<'_, Message> {
             Space::new().width(Length::Fill),
             text(state.last_action.clone()).size(12.0).color(t.muted_foreground),
             Space::new().width(Length::Fixed(16.0)),
+            command_palette_chip(t),
+            Space::new().width(Length::Fixed(8.0)),
             theme_toggle(t),
         ]
         .spacing(8)
@@ -770,10 +872,78 @@ pub fn view(state: &State) -> Element<'_, Message> {
         .height(Length::Fill)
         .width(Length::Fill);
 
-    column![title_bar, divider::horizontal(t), body]
+    let app: Element<'_, Message> = column![title_bar, divider::horizontal(t), body]
         .height(Length::Fill)
         .width(Length::Fill)
-        .into()
+        .into();
+
+    let pages = filtered_pages(&state.command_palette_query);
+    let items: Vec<PaletteItem<'_, Message>> = pages
+        .iter()
+        .map(|(_page, label, cat)| {
+            PaletteItem::new(label.to_string(), Message::NoOp)
+                .secondary(category_label(*cat).to_string())
+                .leading(icon(t, IconName::ChevronRight, 14.0))
+        })
+        .enumerate()
+        .map(|(i, mut it)| {
+            it.on_press = Message::CommandPaletteSelectIndex(i);
+            it
+        })
+        .collect();
+
+    command_palette(
+        t,
+        app,
+        state.command_palette_open,
+        &state.command_palette_query,
+        "Search components and pages…",
+        items,
+        state.command_palette_selected,
+        Message::CommandPaletteQueryChanged,
+        Message::CommandPaletteClose,
+        Message::CommandPaletteConfirm,
+        Message::CommandPaletteSelectIndex,
+    )
+}
+
+fn command_palette_chip<'a>(t: &AppTheme) -> Element<'a, Message> {
+    let tt = *t;
+    let shortcut: Element<'a, Message> = if cfg!(target_os = "macos") {
+        combo(t, &["⌘", "K"])
+    } else {
+        combo(t, &["Ctrl", "K"])
+    };
+    button(
+        row![
+            icon::<Message>(t, IconName::Search, 14.0),
+            shortcut,
+        ]
+        .spacing(8)
+        .align_y(Vertical::Center),
+    )
+    .padding(Padding::from([6.0, 10.0]))
+    .on_press(Message::CommandPaletteOpen)
+    .style(move |_, status| {
+        use button::Status::*;
+        let bg = match status {
+            Hovered => tt.accent,
+            Pressed => tt.muted,
+            _ => iced::Color::TRANSPARENT,
+        };
+        button::Style {
+            background: Some(Background::Color(bg)),
+            text_color: tt.muted_foreground,
+            border: Border {
+                color: tt.border,
+                width: 1.0,
+                radius: 6.0.into(),
+            },
+            shadow: Shadow::default(),
+            snap: true,
+        }
+    })
+    .into()
 }
 
 fn theme_toggle<'a>(t: &AppTheme) -> Element<'a, Message> {
@@ -912,6 +1082,7 @@ fn build_content<'a>(state: &'a State) -> Element<'a, Message> {
         Page::Home => home_page(state),
         Page::Button => demos::button_demo::view(t),
         Page::Input => demos::input_demo::view(state, t),
+        Page::CommandPalette => demos::command_palette_demo::view(state, t),
         Page::Checkbox => demos::checkbox_demo::view(state, t),
         Page::Radio => demos::radio_demo::view(state, t),
         Page::Switch => demos::switch_demo::view(state, t),
@@ -998,6 +1169,7 @@ fn page_description(page: Page) -> &'static str {
         Page::Home => "A faithful iced 0.14 port of longbridge/gpui-component.",
         Page::Button => "Clickable button with variants, sizes, and states.",
         Page::Input => "Text input with sizes, labels, and password mode.",
+        Page::CommandPalette => "Cmdk-style fuzzy launcher (Ctrl+K / ⌘K) for jumping anywhere in the app.",
         Page::Checkbox => "Boolean selection with label.",
         Page::Radio => "Mutually-exclusive single selection.",
         Page::Switch => "Toggle between on / off states.",
