@@ -7,7 +7,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon, IconName},
+    components::icon::{icon, Icon},
     styles,
     theme::AppTheme,
 };
@@ -16,7 +16,7 @@ pub enum Item<Message> {
     Separator,
     Action {
         label: String,
-        icon: Option<IconName>,
+        icon: Option<Icon>,
         shortcut: Option<String>,
         on_press: Message,
         danger: bool,
@@ -37,9 +37,9 @@ impl<Message> Item<Message> {
         }
     }
 
-    pub fn icon(mut self, name: IconName) -> Self {
+    pub fn icon(mut self, icon_src: impl Into<Icon>) -> Self {
         if let Self::Action { ref mut icon, .. } = self {
-            *icon = Some(name);
+            *icon = Some(icon_src.into());
         }
         self
     }

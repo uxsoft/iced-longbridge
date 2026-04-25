@@ -10,14 +10,14 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon_colored, IconName},
+    components::icon::{icon_colored, Icon, IconName},
     theme::AppTheme,
 };
 
 pub struct TreeNode {
     pub id: String,
     pub label: String,
-    pub icon: Option<IconName>,
+    pub icon: Option<Icon>,
     pub children: Vec<TreeNode>,
 }
 
@@ -31,8 +31,8 @@ impl TreeNode {
         }
     }
 
-    pub fn icon(mut self, name: IconName) -> Self {
-        self.icon = Some(name);
+    pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+        self.icon = Some(icon.into());
         self
     }
 
@@ -125,9 +125,9 @@ fn flatten<'a, Message, OnToggle, OnSelect>(
         row_content = row_content.push(Space::new().width(Length::Fixed(18.0)));
     }
 
-    if let Some(name) = node.icon {
+    if let Some(icon_src) = node.icon.clone() {
         row_content = row_content.push(Space::new().width(Length::Fixed(4.0)));
-        row_content = row_content.push(icon_colored::<Message>(name, 14.0, t.muted_foreground));
+        row_content = row_content.push(icon_colored::<Message>(icon_src, 14.0, t.muted_foreground));
     }
 
     row_content = row_content.push(Space::new().width(Length::Fixed(6.0)));

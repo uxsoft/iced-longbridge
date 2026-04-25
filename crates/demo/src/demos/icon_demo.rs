@@ -5,9 +5,11 @@ use iced::{
 
 use crate::{
     Message,
-    components::icon::{icon, icon_colored, IconName},
+    components::icon::{icon, icon_colored, Icon, IconName},
     theme::AppTheme,
 };
+
+const LEMUR_SVG: &[u8] = include_bytes!("../../assets/lemur.svg");
 
 pub fn view<'a>(theme: &AppTheme) -> Element<'a, Message> {
     let header = |s: &str| text(s.to_string()).size(16.0).color(theme.foreground);
@@ -53,6 +55,15 @@ pub fn view<'a>(theme: &AppTheme) -> Element<'a, Message> {
     ]
     .spacing(12);
 
+    let custom = row![
+        icon(theme, IconName::Star, 24.0),
+        icon(theme, Icon::from_svg_bytes(LEMUR_SVG), 24.0),
+        icon_colored(Icon::from_svg_bytes(LEMUR_SVG), 24.0, theme.primary),
+        icon_colored(Icon::from_svg_bytes(LEMUR_SVG), 32.0, theme.danger),
+    ]
+    .spacing(12)
+    .align_y(iced::alignment::Vertical::Center);
+
     column![
         header("All icons"),
         grid,
@@ -62,6 +73,9 @@ pub fn view<'a>(theme: &AppTheme) -> Element<'a, Message> {
         Space::new().height(iced::Length::Fixed(8.0)),
         header("Colors"),
         colors,
+        Space::new().height(iced::Length::Fixed(8.0)),
+        header("Custom SVG (caller-supplied via include_bytes!)"),
+        custom,
     ]
     .spacing(12)
     .into()

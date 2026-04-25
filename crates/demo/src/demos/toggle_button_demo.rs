@@ -19,9 +19,9 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     .spacing(8);
 
     let with_icons = row![
-        toggle_button_ex(theme, "Favorite", Some(IconName::Star), state.toggles[3], Size::Md, Message::ToggleButtonPressed(3)),
-        toggle_button_ex(theme, "Pinned", Some(IconName::ArrowUp), state.toggles[4], Size::Md, Message::ToggleButtonPressed(4)),
-        toggle_button_ex(theme, "Muted", Some(IconName::EyeOff), state.toggles[5], Size::Md, Message::ToggleButtonPressed(5)),
+        toggle_button_ex(theme, "Favorite", Some(IconName::Star.into()), state.toggles[3], Size::Md, Message::ToggleButtonPressed(3)),
+        toggle_button_ex(theme, "Pinned", Some(IconName::ArrowUp.into()), state.toggles[4], Size::Md, Message::ToggleButtonPressed(4)),
+        toggle_button_ex(theme, "Muted", Some(IconName::EyeOff.into()), state.toggles[5], Size::Md, Message::ToggleButtonPressed(5)),
     ]
     .spacing(8);
 
