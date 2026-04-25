@@ -2,11 +2,9 @@ use iced::{Element, widget::{column, row}};
 
 use crate::{
     Message, State,
-    components::{
-        icon::IconName,
-        toggle_button::{toggle_button, toggle_button_ex},
-    },
+    components::toggle_button::{toggle_button, toggle_button_ex},
     demos::common::{section_caption, section_title, vspace},
+    lucide,
     theme::{AppTheme, Size},
 };
 
@@ -19,9 +17,9 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     .spacing(8);
 
     let with_icons = row![
-        toggle_button_ex(theme, "Favorite", Some(IconName::Star.into()), state.toggles[3], Size::Md, Message::ToggleButtonPressed(3)),
-        toggle_button_ex(theme, "Pinned", Some(IconName::ArrowUp.into()), state.toggles[4], Size::Md, Message::ToggleButtonPressed(4)),
-        toggle_button_ex(theme, "Muted", Some(IconName::EyeOff.into()), state.toggles[5], Size::Md, Message::ToggleButtonPressed(5)),
+        toggle_button_ex(theme, "Favorite", Some(lucide::star()), state.toggles[3], Size::Md, Message::ToggleButtonPressed(3)),
+        toggle_button_ex(theme, "Pinned", Some(lucide::arrow_up()), state.toggles[4], Size::Md, Message::ToggleButtonPressed(4)),
+        toggle_button_ex(theme, "Muted", Some(lucide::eye_off()), state.toggles[5], Size::Md, Message::ToggleButtonPressed(5)),
     ]
     .spacing(8);
 

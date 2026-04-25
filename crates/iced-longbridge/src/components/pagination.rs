@@ -7,7 +7,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon_colored, IconName},
+    components::icon::{icon_colored, lucide, Icon},
     theme::AppTheme,
 };
 
@@ -23,7 +23,7 @@ pub fn pagination<'a, Message: Clone + 'a>(
     let prev_enabled = current > 1;
     r = r.push(arrow_btn(
         t,
-        IconName::ChevronLeft,
+        lucide::chevron_left(),
         prev_enabled.then(|| on_change(current.saturating_sub(1).max(1))),
     ));
 
@@ -42,7 +42,7 @@ pub fn pagination<'a, Message: Clone + 'a>(
     let next_enabled = current < total;
     r = r.push(arrow_btn(
         t,
-        IconName::ChevronRight,
+        lucide::chevron_right(),
         next_enabled.then(|| on_change((current + 1).min(total.max(1)))),
     ));
 
@@ -118,7 +118,7 @@ fn page_btn<'a, Message: Clone + 'a>(
 
 fn arrow_btn<'a, Message: Clone + 'a>(
     t: AppTheme,
-    glyph: IconName,
+    glyph: Icon,
     on_press: Option<Message>,
 ) -> Element<'a, Message> {
     let enabled = on_press.is_some();

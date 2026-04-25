@@ -4,3 +4,5 @@
 pub mod components;
 pub mod styles;
 pub mod theme;
+
+pub use components::icon::lucide;

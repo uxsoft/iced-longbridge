@@ -2,11 +2,9 @@ use iced::{Element, widget::{column, container}};
 
 use crate::{
     Message, State,
-    components::{
-        icon::IconName,
-        tree::{tree, TreeNode},
-    },
+    components::tree::{tree, TreeNode},
     demos::common::{section_caption, section_title, vspace},
+    lucide,
     theme::AppTheme,
 };
 
@@ -55,24 +53,24 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
 pub fn sample_nodes() -> Vec<TreeNode> {
     vec![
         TreeNode::new("src", "src")
-            .icon(IconName::Folder)
+            .icon(lucide::folder())
             .children(vec![
                 TreeNode::new("src/components", "components")
-                    .icon(IconName::Folder)
+                    .icon(lucide::folder())
                     .children(vec![
-                        TreeNode::new("src/components/button.rs", "button.rs").icon(IconName::File),
-                        TreeNode::new("src/components/table.rs", "table.rs").icon(IconName::File),
-                        TreeNode::new("src/components/tree.rs", "tree.rs").icon(IconName::File),
+                        TreeNode::new("src/components/button.rs", "button.rs").icon(lucide::file()),
+                        TreeNode::new("src/components/table.rs", "table.rs").icon(lucide::file()),
+                        TreeNode::new("src/components/tree.rs", "tree.rs").icon(lucide::file()),
                     ]),
                 TreeNode::new("src/demos", "demos")
-                    .icon(IconName::Folder)
+                    .icon(lucide::folder())
                     .children(vec![
-                        TreeNode::new("src/demos/tree_demo.rs", "tree_demo.rs").icon(IconName::File),
+                        TreeNode::new("src/demos/tree_demo.rs", "tree_demo.rs").icon(lucide::file()),
                     ]),
-                TreeNode::new("src/main.rs", "main.rs").icon(IconName::File),
-                TreeNode::new("src/theme.rs", "theme.rs").icon(IconName::File),
+                TreeNode::new("src/main.rs", "main.rs").icon(lucide::file()),
+                TreeNode::new("src/theme.rs", "theme.rs").icon(lucide::file()),
             ]),
-        TreeNode::new("Cargo.toml", "Cargo.toml").icon(IconName::File),
-        TreeNode::new("README.md", "README.md").icon(IconName::File),
+        TreeNode::new("Cargo.toml", "Cargo.toml").icon(lucide::file()),
+        TreeNode::new("README.md", "README.md").icon(lucide::file()),
     ]
 }

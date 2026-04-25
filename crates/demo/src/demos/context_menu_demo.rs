@@ -8,10 +8,10 @@ use crate::{
     Message, State,
     components::{
         context_menu::ContextMenu,
-        icon::IconName,
         menu::Item,
     },
     demos::common::{section_caption, section_title, vspace},
+    lucide,
     theme::AppTheme,
 };
 
@@ -24,7 +24,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         Item::new("Paste", Message::MenuAction("Paste".into())).shortcut("⌘V"),
         Item::Separator,
         Item::new("Delete", Message::MenuAction("Delete".into()))
-            .icon(IconName::Trash)
+            .icon(lucide::trash_2())
             .danger(),
     ];
 

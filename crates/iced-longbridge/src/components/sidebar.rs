@@ -12,7 +12,7 @@ use iced::{
 
 use crate::{
     components::{
-        icon::{icon, Icon, IconName},
+        icon::{icon, lucide, Icon},
         tooltip::wrap as tooltip_wrap,
     },
     theme::AppTheme,
@@ -458,7 +458,7 @@ fn render_toggle<'a, Message: Clone + 'a>(
     let t = *theme;
 
     let btn: Element<'a, Message> = if collapsed {
-        let icon_slot = container(icon(theme, IconName::ChevronRight, 16.0))
+        let icon_slot = container(icon(theme, lucide::chevron_right(), 16.0))
             .width(Length::Fixed(40.0))
             .height(Length::Fixed(40.0))
             .align_x(Horizontal::Center)
@@ -470,7 +470,7 @@ fn render_toggle<'a, Message: Clone + 'a>(
         tooltip_wrap(theme, raw.into(), "Expand").into()
     } else {
         let inner = row![
-            icon(theme, IconName::ChevronLeft, 14.0),
+            icon(theme, lucide::chevron_left(), 14.0),
             text("Collapse").size(13.0).color(t.sidebar_foreground),
         ]
         .spacing(10)

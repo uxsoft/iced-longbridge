@@ -10,7 +10,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon_colored, Icon, IconName},
+    components::icon::{icon_colored, lucide, Icon},
     theme::AppTheme,
 };
 
@@ -99,9 +99,9 @@ fn flatten<'a, Message, OnToggle, OnSelect>(
 
     if has_children {
         let glyph = if is_expanded {
-            IconName::ChevronDown
+            lucide::chevron_down()
         } else {
-            IconName::ChevronRight
+            lucide::chevron_right()
         };
         let chevron = button(icon_colored::<Message>(glyph, 12.0, t.muted_foreground))
             .padding(Padding::from(2.0))

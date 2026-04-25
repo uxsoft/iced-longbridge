@@ -14,7 +14,7 @@ use iced::{
 
 use crate::{
     components::{
-        icon::{icon, IconName},
+        icon::{icon, lucide},
         input::input,
         kbd::kbd,
         list::{list_item, ListItem},
@@ -84,7 +84,7 @@ pub fn command_palette<'a, Message: Clone + 'a>(
 
     let header = container(
         row![
-            icon::<Message>(theme, IconName::Search, 16.0),
+            icon::<Message>(theme, lucide::search(), 16.0),
             input(theme, placeholder, query)
                 .id(input_id())
                 .on_input(on_query_change)

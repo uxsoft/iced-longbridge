@@ -7,7 +7,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon_colored, IconName},
+    components::icon::{icon_colored, lucide},
     theme::AppTheme,
 };
 
@@ -72,7 +72,7 @@ pub fn breadcrumb<'a, Message: Clone + 'a>(
 
         if !is_last {
             r = r.push(icon_colored::<Message>(
-                IconName::ChevronRight,
+                lucide::chevron_right(),
                 12.0,
                 t.muted_foreground,
             ));

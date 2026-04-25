@@ -4,20 +4,23 @@ use crate::{
     Message, State,
     components::{
         badge::{badge, BadgeVariant},
-        icon::IconName,
+        icon::Icon,
         list::{list, ListItem},
     },
     demos::common::{section_caption, section_title, vspace},
+    lucide,
     theme::AppTheme,
 };
 
-pub const SAMPLE: &[(&str, &str, &str, IconName)] = &[
-    ("Inbox", "12 new messages", "primary", IconName::Mail),
-    ("Starred", "Pinned items", "secondary", IconName::Star),
-    ("Drafts", "3 unsent", "warning", IconName::Edit),
-    ("Sent", "Last: 2h ago", "muted", IconName::Upload),
-    ("Archive", "—", "muted", IconName::Folder),
-    ("Trash", "Empty", "muted", IconName::Trash),
+type SampleRow = (&'static str, &'static str, &'static str, fn() -> Icon);
+
+pub const SAMPLE: &[SampleRow] = &[
+    ("Inbox", "12 new messages", "primary", lucide::mail),
+    ("Starred", "Pinned items", "secondary", lucide::star),
+    ("Drafts", "3 unsent", "warning", lucide::pencil),
+    ("Sent", "Last: 2h ago", "muted", lucide::upload),
+    ("Archive", "—", "muted", lucide::folder),
+    ("Trash", "Empty", "muted", lucide::trash_2),
 ];
 
 pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
@@ -26,7 +29,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     let items: Vec<ListItem<'a, Message>> = SAMPLE
         .iter()
         .enumerate()
-        .map(|(i, (name, hint, variant, icon))| {
+        .map(|(i, (name, hint, variant, icon_factory))| {
             let v = match *variant {
                 "primary" => BadgeVariant::Default,
                 "warning" => BadgeVariant::Warning,
@@ -39,7 +42,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
             };
             let mut it = ListItem::new(name.to_string())
                 .secondary(hint.to_string())
-                .leading_icon(theme, *icon)
+                .leading_icon(theme, icon_factory())
                 .selected(selected == i)
                 .on_press(Message::ListSelected(i));
             if let Some(tr) = trailing {

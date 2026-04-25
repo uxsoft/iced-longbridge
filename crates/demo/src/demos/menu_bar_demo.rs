@@ -3,11 +3,11 @@ use iced::{Element, widget::column};
 use crate::{
     Message, State,
     components::{
-        icon::IconName,
         menu::Item,
         menu_bar::{menu_bar, MenuBarMenu},
     },
     demos::common::{section_caption, section_title},
+    lucide,
     theme::AppTheme,
 };
 
@@ -23,10 +23,10 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
             Message::DropdownMenuToggle(20),
             vec![
                 Item::new("New file", Message::MenuAction("New file".into()))
-                    .icon(IconName::File)
+                    .icon(lucide::file())
                     .shortcut("⌘N"),
                 Item::new("New folder", Message::MenuAction("New folder".into()))
-                    .icon(IconName::Folder),
+                    .icon(lucide::folder()),
                 Item::Separator,
                 Item::new("Open…", Message::MenuAction("Open".into())).shortcut("⌘O"),
                 Item::new("Save", Message::MenuAction("Save".into())).shortcut("⌘S"),

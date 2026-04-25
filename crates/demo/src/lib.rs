@@ -8,6 +8,7 @@ pub mod demos;
 // Re-export the component library modules so demo files can use `crate::components`
 // and `crate::theme` without change.
 pub use iced_longbridge::components;
+pub use iced_longbridge::lucide;
 pub use iced_longbridge::theme;
 
 use std::time::Duration;
@@ -25,7 +26,7 @@ use crate::{
         button::{button_ex, Variant},
         command_palette::{self, command_palette, PaletteItem},
         divider,
-        icon::{icon, IconName},
+        icon::icon,
         kbd::combo,
         sheet::Side as SheetSide,
     },
@@ -883,7 +884,7 @@ pub fn view(state: &State) -> Element<'_, Message> {
         .map(|(_page, label, cat)| {
             PaletteItem::new(label.to_string(), Message::NoOp)
                 .secondary(category_label(*cat).to_string())
-                .leading(icon(t, IconName::ChevronRight, 14.0))
+                .leading(icon(t, lucide::chevron_right(), 14.0))
         })
         .enumerate()
         .map(|(i, mut it)| {
@@ -916,7 +917,7 @@ fn command_palette_chip<'a>(t: &AppTheme) -> Element<'a, Message> {
     };
     button(
         row![
-            icon::<Message>(t, IconName::Search, 14.0),
+            icon::<Message>(t, lucide::search(), 14.0),
             shortcut,
         ]
         .spacing(8)
@@ -949,8 +950,8 @@ fn command_palette_chip<'a>(t: &AppTheme) -> Element<'a, Message> {
 fn theme_toggle<'a>(t: &AppTheme) -> Element<'a, Message> {
     let tt = *t;
     let glyph = match t.appearance {
-        Appearance::Light => IconName::Moon,
-        Appearance::Dark => IconName::Sun,
+        Appearance::Light => lucide::moon(),
+        Appearance::Dark => lucide::sun(),
     };
     button(
         row![icon(t, glyph, 16.0), text("Toggle theme").size(13.0).color(t.foreground)]

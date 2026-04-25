@@ -9,7 +9,7 @@ use iced::{
 
 use crate::{
     components::{
-        icon::{icon, IconName},
+        icon::{icon, lucide},
         popover::popover_dismissable,
     },
     theme::AppTheme,
@@ -97,11 +97,11 @@ pub fn time_picker_popover<'a, Message: Clone + 'a>(
 
     let trigger = button(
         row![
-            icon(theme, IconName::Clock, 14.0),
+            icon(theme, lucide::clock(), 14.0),
             text(label).size(13.0),
             icon(
                 theme,
-                if open { IconName::ChevronUp } else { IconName::ChevronDown },
+                if open { lucide::chevron_up() } else { lucide::chevron_down() },
                 13.0,
             ),
         ]

@@ -16,7 +16,7 @@ use iced::{
 
 use crate::{
     components::{
-        icon::{icon_colored, IconName},
+        icon::{icon_colored, lucide, Icon},
         overlay,
     },
     styles,
@@ -32,12 +32,12 @@ pub enum NotificationKind {
 }
 
 impl NotificationKind {
-    pub fn icon(self) -> IconName {
+    pub fn icon(self) -> Icon {
         match self {
-            NotificationKind::Info => IconName::Info,
-            NotificationKind::Success => IconName::CheckCircle,
-            NotificationKind::Warning => IconName::Warning,
-            NotificationKind::Error => IconName::XCircle,
+            NotificationKind::Info => lucide::info(),
+            NotificationKind::Success => lucide::circle_check(),
+            NotificationKind::Warning => lucide::triangle_alert(),
+            NotificationKind::Error => lucide::circle_x(),
         }
     }
 
@@ -220,7 +220,7 @@ fn close_button<'a, Message: Clone + 'a>(
     t: AppTheme,
     on_press: Message,
 ) -> Element<'a, Message> {
-    button(icon_colored::<Message>(IconName::Close, 12.0, t.muted_foreground))
+    button(icon_colored::<Message>(lucide::x(), 12.0, t.muted_foreground))
         .padding(Padding::from(2.0))
         .on_press(on_press)
         .style(move |_, status| styles::icon_button_style(&t, status, 4.0))
