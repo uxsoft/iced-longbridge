@@ -7,7 +7,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon_colored, IconName},
+    components::icon::{icon_colored, lucide, Icon},
     theme::AppTheme,
 };
 
@@ -31,13 +31,13 @@ pub fn title_bar<'a, Message: Clone + 'a>(
         content = content.push(el);
     }
     if let Some(msg) = on_minimize {
-        content = content.push(window_button(t, IconName::Minus, msg, t.muted_foreground));
+        content = content.push(window_button(t, lucide::minus(), msg, t.muted_foreground));
     }
     if let Some(msg) = on_maximize {
-        content = content.push(window_button(t, IconName::Square, msg, t.muted_foreground));
+        content = content.push(window_button(t, lucide::square(), msg, t.muted_foreground));
     }
     if let Some(msg) = on_close {
-        content = content.push(window_button(t, IconName::Close, msg, t.danger));
+        content = content.push(window_button(t, lucide::x(), msg, t.danger));
     }
 
     container(content)
@@ -59,7 +59,7 @@ pub fn title_bar<'a, Message: Clone + 'a>(
 
 fn window_button<'a, Message: Clone + 'a>(
     t: AppTheme,
-    glyph: IconName,
+    glyph: Icon,
     on_press: Message,
     hover_color: iced::Color,
 ) -> Element<'a, Message> {

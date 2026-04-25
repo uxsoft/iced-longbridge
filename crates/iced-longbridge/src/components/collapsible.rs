@@ -7,7 +7,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon, IconName},
+    components::icon::{icon, lucide},
     theme::AppTheme,
 };
 
@@ -20,9 +20,9 @@ pub fn collapsible<'a, Message: Clone + 'a>(
 ) -> Element<'a, Message> {
     let t = *theme;
     let glyph = if expanded {
-        IconName::ChevronDown
+        lucide::chevron_down()
     } else {
-        IconName::ChevronRight
+        lucide::chevron_right()
     };
 
     let header = button(

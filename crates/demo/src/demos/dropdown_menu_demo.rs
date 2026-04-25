@@ -4,10 +4,10 @@ use crate::{
     Message, State,
     components::{
         dropdown_button::{dropdown_button, dropdown_button_sized},
-        icon::IconName,
         menu::Item,
     },
     demos::common::{section_caption, section_title, vspace},
+    lucide,
     theme::{AppTheme, Size},
 };
 
@@ -15,14 +15,14 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     let open = state.dropdown_menu_open;
 
     let basic_items = vec![
-        Item::new("New file", Message::MenuAction("New file".into())).icon(IconName::File),
-        Item::new("New folder", Message::MenuAction("New folder".into())).icon(IconName::Folder),
+        Item::new("New file", Message::MenuAction("New file".into())).icon(lucide::file()),
+        Item::new("New folder", Message::MenuAction("New folder".into())).icon(lucide::folder()),
         Item::Separator,
         Item::new("Open", Message::MenuAction("Open".into())).shortcut("⌘O"),
         Item::new("Save", Message::MenuAction("Save".into())).shortcut("⌘S"),
         Item::Separator,
         Item::Header("Danger zone".into()),
-        Item::new("Delete", Message::MenuAction("Delete".into())).icon(IconName::Trash).danger(),
+        Item::new("Delete", Message::MenuAction("Delete".into())).icon(lucide::trash_2()).danger(),
     ];
 
     let size_items = vec![

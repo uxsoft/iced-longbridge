@@ -12,7 +12,7 @@ use iced::{
 
 use crate::{
     components::{
-        icon::{icon, IconName},
+        icon::{icon, lucide, Icon},
         tooltip::wrap as tooltip_wrap,
     },
     theme::AppTheme,
@@ -22,7 +22,7 @@ const COLLAPSED_WIDTH: f32 = 56.0;
 
 pub struct Item<Message> {
     pub label: String,
-    pub icon: Option<IconName>,
+    pub icon: Option<Icon>,
     pub badge: Option<String>,
     pub on_press: Option<Message>,
     pub active: bool,
@@ -39,8 +39,8 @@ impl<Message> Item<Message> {
         }
     }
 
-    pub fn icon(mut self, name: IconName) -> Self {
-        self.icon = Some(name);
+    pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+        self.icon = Some(icon.into());
         self
     }
 
@@ -353,7 +353,7 @@ fn render_item<'a, Message: Clone + 'a>(
 fn render_item_collapsed<'a, Message: Clone + 'a>(
     theme: &AppTheme,
     label: String,
-    glyph: Option<IconName>,
+    glyph: Option<Icon>,
     badge: Option<String>,
     active: bool,
     on_press: Option<Message>,
@@ -458,7 +458,7 @@ fn render_toggle<'a, Message: Clone + 'a>(
     let t = *theme;
 
     let btn: Element<'a, Message> = if collapsed {
-        let icon_slot = container(icon(theme, IconName::ChevronRight, 16.0))
+        let icon_slot = container(icon(theme, lucide::chevron_right(), 16.0))
             .width(Length::Fixed(40.0))
             .height(Length::Fixed(40.0))
             .align_x(Horizontal::Center)
@@ -470,7 +470,7 @@ fn render_toggle<'a, Message: Clone + 'a>(
         tooltip_wrap(theme, raw.into(), "Expand").into()
     } else {
         let inner = row![
-            icon(theme, IconName::ChevronLeft, 14.0),
+            icon(theme, lucide::chevron_left(), 14.0),
             text("Collapse").size(13.0).color(t.sidebar_foreground),
         ]
         .spacing(10)

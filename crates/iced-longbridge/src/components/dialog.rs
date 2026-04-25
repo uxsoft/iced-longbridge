@@ -7,7 +7,7 @@ use iced::{
 };
 
 use crate::{
-    components::{icon::{icon_colored, IconName}, overlay},
+    components::{icon::{icon_colored, lucide}, overlay},
     styles,
     theme::AppTheme,
 };
@@ -64,10 +64,10 @@ pub fn dialog<'a, Message: Clone + 'a>(
 
     let header_icon: Option<Element<Message>> = match variant {
         DialogVariant::Default => None,
-        DialogVariant::Info => Some(icon_colored(IconName::Info, 20.0, accent)),
-        DialogVariant::Success => Some(icon_colored(IconName::CheckCircle, 20.0, accent)),
-        DialogVariant::Warning => Some(icon_colored(IconName::Warning, 20.0, accent)),
-        DialogVariant::Danger => Some(icon_colored(IconName::XCircle, 20.0, accent)),
+        DialogVariant::Info => Some(icon_colored(lucide::info(), 20.0, accent)),
+        DialogVariant::Success => Some(icon_colored(lucide::circle_check(), 20.0, accent)),
+        DialogVariant::Warning => Some(icon_colored(lucide::triangle_alert(), 20.0, accent)),
+        DialogVariant::Danger => Some(icon_colored(lucide::circle_x(), 20.0, accent)),
     };
 
     let mut title_row = row![].spacing(10).align_y(Vertical::Center);
@@ -111,7 +111,7 @@ fn variant_color(t: AppTheme, v: DialogVariant) -> iced::Color {
 }
 
 fn close_button<'a, Message: Clone + 'a>(t: AppTheme, on_press: Message) -> Element<'a, Message> {
-    button(icon_colored::<Message>(IconName::Close, 14.0, t.muted_foreground))
+    button(icon_colored::<Message>(lucide::x(), 14.0, t.muted_foreground))
         .padding(Padding::from([4.0, 6.0]))
         .on_press(on_press)
         .style(move |_, status| styles::icon_button_style(&t, status, 4.0))

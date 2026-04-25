@@ -7,7 +7,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon, IconName},
+    components::icon::{icon, Icon},
     theme::{AppTheme, Size},
 };
 
@@ -23,7 +23,7 @@ pub fn toggle_button<'a, Message: Clone + 'a>(
 pub fn toggle_button_ex<'a, Message: Clone + 'a>(
     theme: &AppTheme,
     label: impl Into<String>,
-    leading_icon: Option<IconName>,
+    leading_icon: Option<Icon>,
     active: bool,
     size: Size,
     on_toggle: Message,
@@ -39,8 +39,8 @@ pub fn toggle_button_ex<'a, Message: Clone + 'a>(
         .spacing(8)
         .height(iced::Length::Fill)
         .align_y(Vertical::Center);
-    if let Some(name) = leading_icon {
-        inner = inner.push(icon(theme, name, text_size));
+    if let Some(icon_src) = leading_icon {
+        inner = inner.push(icon(theme, icon_src, text_size));
     }
     inner = inner.push(text(label).size(text_size).align_y(Vertical::Center));
 

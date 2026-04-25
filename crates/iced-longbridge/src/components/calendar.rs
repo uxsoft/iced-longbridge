@@ -8,7 +8,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon_colored, IconName},
+    components::icon::{icon_colored, lucide, Icon},
     theme::AppTheme,
 };
 
@@ -24,11 +24,11 @@ pub fn calendar<'a, Message: Clone + 'a>(
 ) -> Element<'a, Message> {
     let t = *theme;
     let header = row![
-        nav_btn(t, IconName::ChevronLeft, on_prev_month),
+        nav_btn(t, lucide::chevron_left(), on_prev_month),
         container(text(format!("{} {}", month_name(view_month), view_year)).size(14.0).color(t.foreground))
             .width(Length::Fill)
             .align_x(Horizontal::Center),
-        nav_btn(t, IconName::ChevronRight, on_next_month),
+        nav_btn(t, lucide::chevron_right(), on_next_month),
     ]
     .spacing(8)
     .align_y(Vertical::Center);
@@ -122,7 +122,7 @@ fn day_cell<'a, Message: Clone + 'a>(
 
 fn nav_btn<'a, Message: Clone + 'a>(
     t: AppTheme,
-    glyph: IconName,
+    glyph: Icon,
     on_press: Message,
 ) -> Element<'a, Message> {
     button(icon_colored::<Message>(glyph, 14.0, t.foreground))

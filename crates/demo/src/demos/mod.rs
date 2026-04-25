@@ -13,6 +13,8 @@ pub mod checkbox_demo;
 pub mod code_editor_demo;
 pub mod collapsible_demo;
 pub mod color_picker_demo;
+pub mod command_palette_demo;
+pub mod context_menu_demo;
 pub mod common;
 pub mod data_table_demo;
 pub mod date_picker_demo;

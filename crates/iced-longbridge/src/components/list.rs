@@ -7,7 +7,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon, IconName},
+    components::icon::{icon, Icon},
     styles,
     theme::AppTheme,
 };
@@ -46,11 +46,11 @@ impl<'a, Message> ListItem<'a, Message> {
         self
     }
 
-    pub fn leading_icon(mut self, theme: &AppTheme, name: IconName) -> Self
+    pub fn leading_icon(mut self, theme: &AppTheme, icon_src: impl Into<Icon>) -> Self
     where
         Message: 'a,
     {
-        self.leading = Some(icon(theme, name, 16.0));
+        self.leading = Some(icon(theme, icon_src, 16.0));
         self
     }
 

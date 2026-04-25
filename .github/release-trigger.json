@@ -1,0 +1,4 @@
+{
+  "tag": "v0.1.0",
+  "notes": "## v0.1.0 — Initial release\n\n### New Features\n\n**Context Menu** (#4)\n- New `ContextMenu` widget for right-click context menus on any element\n- Shared popover panel between menu bar and context menu components\n- Context menu showcase page in the demo app\n\n**Sidebar collapse/expand** (#4)\n- Built-in collapse/expand toggle button in the sidebar\n- Collapsed icon-only rail rendering\n- `collapsed` and `on_toggle` builder fields\n- Sidebar refactored to a builder API\n\n**Dismissable Popovers** (#1, #2)\n- `FloatingPanel::on_dismiss` and `popover_dismissable` helper for outside-click dismissal\n- Dropdown button, color picker, and time picker updated to use dismissable popovers\n- Improved flip behavior and layout for floating panels"
+}

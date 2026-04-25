@@ -27,7 +27,7 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon_colored, IconName},
+    components::icon::{icon_colored, lucide},
     theme::AppTheme,
 };
 
@@ -155,8 +155,8 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
         if let Some(dir) = sort_dir {
             inner = inner.push(icon_colored::<Message>(
                 match dir {
-                    SortDir::Asc => IconName::SortAsc,
-                    SortDir::Desc => IconName::SortDesc,
+                    SortDir::Asc => lucide::arrow_up_narrow_wide(),
+                    SortDir::Desc => lucide::arrow_down_wide_narrow(),
                 },
                 11.0,
                 t.muted_foreground,

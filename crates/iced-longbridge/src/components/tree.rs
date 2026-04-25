@@ -10,14 +10,14 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon_colored, IconName},
+    components::icon::{icon_colored, lucide, Icon},
     theme::AppTheme,
 };
 
 pub struct TreeNode {
     pub id: String,
     pub label: String,
-    pub icon: Option<IconName>,
+    pub icon: Option<Icon>,
     pub children: Vec<TreeNode>,
 }
 
@@ -31,8 +31,8 @@ impl TreeNode {
         }
     }
 
-    pub fn icon(mut self, name: IconName) -> Self {
-        self.icon = Some(name);
+    pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+        self.icon = Some(icon.into());
         self
     }
 
@@ -99,9 +99,9 @@ fn flatten<'a, Message, OnToggle, OnSelect>(
 
     if has_children {
         let glyph = if is_expanded {
-            IconName::ChevronDown
+            lucide::chevron_down()
         } else {
-            IconName::ChevronRight
+            lucide::chevron_right()
         };
         let chevron = button(icon_colored::<Message>(glyph, 12.0, t.muted_foreground))
             .padding(Padding::from(2.0))
@@ -125,9 +125,9 @@ fn flatten<'a, Message, OnToggle, OnSelect>(
         row_content = row_content.push(Space::new().width(Length::Fixed(18.0)));
     }
 
-    if let Some(name) = node.icon {
+    if let Some(icon_src) = node.icon.clone() {
         row_content = row_content.push(Space::new().width(Length::Fixed(4.0)));
-        row_content = row_content.push(icon_colored::<Message>(name, 14.0, t.muted_foreground));
+        row_content = row_content.push(icon_colored::<Message>(icon_src, 14.0, t.muted_foreground));
     }
 
     row_content = row_content.push(Space::new().width(Length::Fixed(6.0)));

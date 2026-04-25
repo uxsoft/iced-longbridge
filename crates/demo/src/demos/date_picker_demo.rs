@@ -10,10 +10,11 @@ use crate::{
     Message, State,
     components::{
         calendar::calendar,
-        icon::{icon, IconName},
+        icon::icon,
         popover::popover_dismissable,
     },
     demos::common::{section_caption, section_title},
+    lucide,
     theme::AppTheme,
 };
 
@@ -27,9 +28,9 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
 
     let trigger = button(
         row![
-            icon(theme, IconName::Calendar, 14.0),
+            icon(theme, lucide::calendar(), 14.0),
             text(label).size(13.0),
-            icon(theme, if open { IconName::ChevronUp } else { IconName::ChevronDown }, 13.0),
+            icon(theme, if open { lucide::chevron_up() } else { lucide::chevron_down() }, 13.0),
         ]
         .spacing(8)
         .align_y(Vertical::Center),

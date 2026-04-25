@@ -11,6 +11,8 @@ pub mod checkbox;
 pub mod code_editor;
 pub mod collapsible;
 pub mod color_picker;
+pub mod command_palette;
+pub mod context_menu;
 pub mod data_table;
 pub mod description_list;
 pub mod dialog;
