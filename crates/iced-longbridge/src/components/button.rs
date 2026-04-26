@@ -6,8 +6,9 @@ use iced::{
 };
 
 use crate::{
+    components::icon::{icon_colored, Icon},
     styles,
-    theme::{AppTheme, Size},
+    theme::{with_alpha, AppTheme, Size},
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -61,6 +62,36 @@ pub fn button_ex<'a, Message: 'a + Clone>(
         btn = btn.on_press(msg);
     }
 
+    btn.into()
+}
+
+/// Icon-only Ghost button. Transparent by default with a subtle hover
+/// tint. The hover/press backgrounds are translucent foreground so the
+/// effect stays visible whether the button sits on `t.background`,
+/// `t.muted`, or another surface (`Variant::Ghost`'s opaque `t.accent`
+/// hover collides with `t.muted` in this design system, so a generic
+/// icon button needs a surface-agnostic tint).
+pub fn ghost_icon_button<'a, Message: 'a + Clone>(
+    theme: &AppTheme,
+    icon_src: impl Into<Icon>,
+    on_press: Option<Message>,
+) -> Element<'a, Message> {
+    let t = *theme;
+    let content = icon_colored::<Message>(icon_src.into(), 14.0, t.muted_foreground);
+    let mut btn = button(content)
+        .padding(Padding::from([4.0, 6.0]))
+        .style(move |_, status| {
+            use button::Status::*;
+            let bg = match status {
+                Hovered => with_alpha(t.foreground, 0.08),
+                Pressed => with_alpha(t.foreground, 0.14),
+                _ => iced::Color::TRANSPARENT,
+            };
+            styles::button_style(Some(bg), t.foreground, iced::Color::TRANSPARENT, 0.0, 4.0)
+        });
+    if let Some(msg) = on_press {
+        btn = btn.on_press(msg);
+    }
     btn.into()
 }
 

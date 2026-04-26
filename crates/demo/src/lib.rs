@@ -273,6 +273,8 @@ pub enum Message {
     TableResizeStart(usize),
     TableResizeMove(iced::Point),
     TableResizeEnd,
+    TableHeaderButtonToggle(usize),
+    TableHeaderMenuAction(&'static str),
     ListSelected(usize),
     TreeToggle(String),
     TreeSelect(String),
@@ -354,6 +356,7 @@ pub struct State {
     pub table_col_widths: Vec<f32>,
     pub table_resize_col: Option<usize>,
     pub table_resize_last_x: Option<f32>,
+    pub table_header_menu_open: Option<usize>,
     pub list_selected: usize,
     pub data_table: crate::components::data_table::DataTable,
     pub tree_nodes: Vec<crate::components::tree::TreeNode>,
@@ -459,6 +462,7 @@ impl Default for State {
             table_col_widths: vec![220.0, 220.0, 140.0, 140.0],
             table_resize_col: None,
             table_resize_last_x: None,
+            table_header_menu_open: None,
             list_selected: 0,
             data_table: build_sample_data_table(),
             tree_nodes: crate::demos::tree_demo::sample_nodes(),
@@ -720,6 +724,17 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
         Message::TableResizeEnd => {
             state.table_resize_col = None;
             state.table_resize_last_x = None;
+        }
+        Message::TableHeaderButtonToggle(i) => {
+            state.table_header_menu_open =
+                if state.table_header_menu_open == Some(i) { None } else { Some(i) };
+        }
+        Message::TableHeaderMenuAction(action) => {
+            state.last_action = format!("Table header: {action}");
+            state.table_header_menu_open = None;
+            if action == "reset_sort" {
+                state.table_sort = None;
+            }
         }
         Message::ListSelected(i) => {
             state.list_selected = i;

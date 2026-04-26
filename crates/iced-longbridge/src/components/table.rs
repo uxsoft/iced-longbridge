@@ -27,7 +27,11 @@ use iced::{
 };
 
 use crate::{
-    components::icon::{icon_colored, lucide},
+    components::{
+        button::ghost_icon_button,
+        icon::{icon_colored, lucide, Icon},
+        popover::popover_aligned,
+    },
     theme::AppTheme,
 };
 
@@ -53,6 +57,9 @@ pub struct Column<'a, T, Message> {
     #[allow(clippy::type_complexity)]
     pub render: Box<dyn Fn(&T) -> Element<'a, Message> + 'a>,
     pub sort_key: Option<&'static str>,
+    pub header_button_icon: Option<Icon>,
+    pub header_button_msg: Option<Message>,
+    pub header_panel: Option<Element<'a, Message>>,
 }
 
 impl<'a, T, Message> Column<'a, T, Message> {
@@ -66,6 +73,9 @@ impl<'a, T, Message> Column<'a, T, Message> {
             align: Horizontal::Left,
             render: Box::new(render),
             sort_key: None,
+            header_button_icon: None,
+            header_button_msg: None,
+            header_panel: None,
         }
     }
 
@@ -81,6 +91,23 @@ impl<'a, T, Message> Column<'a, T, Message> {
 
     pub fn sortable(mut self, key: &'static str) -> Self {
         self.sort_key = Some(key);
+        self
+    }
+
+    /// Add an icon button to this column's header. Composed next to the
+    /// title/sort area so it stays independently clickable when the column
+    /// is also `sortable`.
+    pub fn header_button(mut self, icon: impl Into<Icon>, on_press: Message) -> Self {
+        self.header_button_icon = Some(icon.into());
+        self.header_button_msg = Some(on_press);
+        self
+    }
+
+    /// Attach a floating panel (e.g. a `menu()`) anchored beneath the header
+    /// button. The same `on_press` message also fires on outside-click to
+    /// dismiss, so a single toggle message can drive open/close.
+    pub fn header_panel(mut self, panel: impl Into<Element<'a, Message>>) -> Self {
+        self.header_panel = Some(panel.into());
         self
     }
 }
@@ -141,60 +168,19 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
         row_height,
         resize,
     } = options;
+    let mut columns = columns;
     let col_count = columns.len();
 
     // Header row.
     let mut header = row![].spacing(0);
-    for (i, col) in columns.iter().enumerate() {
+    for (i, col) in columns.iter_mut().enumerate() {
         let is_sorted = sort.map(|(k, _)| Some(k) == col.sort_key).unwrap_or(false);
         let sort_dir = if is_sorted { sort.map(|(_, d)| d) } else { None };
 
-        let mut inner = row![text(col.header.clone()).size(12.0).color(t.muted_foreground)]
-            .spacing(6)
-            .align_y(Vertical::Center);
-        if let Some(dir) = sort_dir {
-            inner = inner.push(icon_colored::<Message>(
-                match dir {
-                    SortDir::Asc => lucide::arrow_up_narrow_wide(),
-                    SortDir::Desc => lucide::arrow_down_wide_narrow(),
-                },
-                11.0,
-                t.muted_foreground,
-            ));
-        }
-
-        let cell = container(inner)
-            .padding(Padding::from([0.0, 12.0]))
-            .width(col.width)
-            .height(Length::Fixed(36.0))
-            .align_x(col.align)
-            .align_y(Vertical::Center);
-
-        // Sortable cells are wrapped in a button that emits on_sort.
-        let cell_el: Element<Message> = match (col.sort_key, on_sort.as_ref()) {
-            (Some(key), Some(cb)) => {
-                let msg = cb(key);
-                iced::widget::button(cell)
-                    .padding(0)
-                    .on_press(msg)
-                    .style(move |_, status| {
-                        use iced::widget::button::Status::*;
-                        let bg = match status {
-                            Hovered => t.accent,
-                            Pressed => t.muted,
-                            _ => iced::Color::TRANSPARENT,
-                        };
-                        iced::widget::button::Style {
-                            background: Some(Background::Color(bg)),
-                            text_color: t.foreground,
-                            border: Border::default(),
-                            shadow: Shadow::default(),
-                            snap: true,
-                        }
-                    })
-                    .into()
-            }
-            _ => cell.into(),
+        let cell_el: Element<Message> = if col.header_button_icon.is_some() {
+            build_header_cell_with_button(&t, col, sort_dir, on_sort.as_deref())
+        } else {
+            build_header_cell(&t, col, sort_dir, on_sort.as_deref())
         };
 
         header = header.push(cell_el);
@@ -359,5 +345,171 @@ fn body_divider<'a, Message: 'a>(row_height: f32) -> Element<'a, Message> {
     container(Space::new().width(Length::Fixed(DIVIDER_WIDTH)).height(Length::Fill))
         .width(Length::Fixed(DIVIDER_WIDTH))
         .height(Length::Fixed(row_height))
+        .into()
+}
+
+/// Build a sort-toggle button (or plain title row) for the column header.
+/// Used by `build_header_cell_with_button` so the title click target stays
+/// distinct from the icon button.
+fn build_sort_area<'a, T, Message: Clone + 'a>(
+    t: &AppTheme,
+    col: &Column<'a, T, Message>,
+    sort_dir: Option<SortDir>,
+    on_sort: Option<&(dyn Fn(&'static str) -> Message + 'a)>,
+) -> Element<'a, Message> {
+    let t = *t;
+    let mut inner = row![text(col.header.clone()).size(12.0).color(t.muted_foreground)]
+        .spacing(6)
+        .align_y(Vertical::Center);
+    if let Some(dir) = sort_dir {
+        inner = inner.push(icon_colored::<Message>(
+            match dir {
+                SortDir::Asc => lucide::arrow_up_narrow_wide(),
+                SortDir::Desc => lucide::arrow_down_wide_narrow(),
+            },
+            11.0,
+            t.muted_foreground,
+        ));
+    }
+
+    match (col.sort_key, on_sort) {
+        (Some(key), Some(cb)) => {
+            let msg = cb(key);
+            iced::widget::button(inner)
+                .padding(Padding::from([0.0, 12.0]))
+                .on_press(msg)
+                .style(move |_, status| {
+                    use iced::widget::button::Status::*;
+                    let bg = match status {
+                        Hovered => t.accent,
+                        Pressed => t.muted,
+                        _ => iced::Color::TRANSPARENT,
+                    };
+                    iced::widget::button::Style {
+                        background: Some(Background::Color(bg)),
+                        text_color: t.foreground,
+                        border: Border::default(),
+                        shadow: Shadow::default(),
+                        snap: true,
+                    }
+                })
+                .into()
+        }
+        _ => container(inner)
+            .padding(Padding::from([0.0, 12.0]))
+            .into(),
+    }
+}
+
+/// Header cell layout used when a column has no `header_button`. Kept
+/// behaviour-equivalent to the pre-extension code so existing call sites
+/// render identically.
+fn build_header_cell<'a, T, Message: Clone + 'a>(
+    t: &AppTheme,
+    col: &Column<'a, T, Message>,
+    sort_dir: Option<SortDir>,
+    on_sort: Option<&(dyn Fn(&'static str) -> Message + 'a)>,
+) -> Element<'a, Message> {
+    let t = *t;
+    let mut inner = row![text(col.header.clone()).size(12.0).color(t.muted_foreground)]
+        .spacing(6)
+        .align_y(Vertical::Center);
+    if let Some(dir) = sort_dir {
+        inner = inner.push(icon_colored::<Message>(
+            match dir {
+                SortDir::Asc => lucide::arrow_up_narrow_wide(),
+                SortDir::Desc => lucide::arrow_down_wide_narrow(),
+            },
+            11.0,
+            t.muted_foreground,
+        ));
+    }
+
+    let cell = container(inner)
+        .padding(Padding::from([0.0, 12.0]))
+        .width(col.width)
+        .height(Length::Fixed(36.0))
+        .align_x(col.align)
+        .align_y(Vertical::Center);
+
+    match (col.sort_key, on_sort) {
+        (Some(key), Some(cb)) => {
+            let msg = cb(key);
+            iced::widget::button(cell)
+                .padding(0)
+                .on_press(msg)
+                .style(move |_, status| {
+                    use iced::widget::button::Status::*;
+                    let bg = match status {
+                        Hovered => t.accent,
+                        Pressed => t.muted,
+                        _ => iced::Color::TRANSPARENT,
+                    };
+                    iced::widget::button::Style {
+                        background: Some(Background::Color(bg)),
+                        text_color: t.foreground,
+                        border: Border::default(),
+                        shadow: Shadow::default(),
+                        snap: true,
+                    }
+                })
+                .into()
+        }
+        _ => cell.into(),
+    }
+}
+
+/// Header cell with an icon button (and optional floating panel) composed
+/// next to the title/sort area. The icon button is a sibling of the sort
+/// wrapper — not a child — so each `iced::widget::button` is hit-tested
+/// independently.
+fn build_header_cell_with_button<'a, T, Message: Clone + 'a>(
+    t: &AppTheme,
+    col: &mut Column<'a, T, Message>,
+    sort_dir: Option<SortDir>,
+    on_sort: Option<&(dyn Fn(&'static str) -> Message + 'a)>,
+) -> Element<'a, Message> {
+    let t = *t;
+    let sort_area = build_sort_area(&t, col, sort_dir, on_sort);
+
+    let icon = col.header_button_icon.clone().expect("checked by caller");
+    let msg = col.header_button_msg.clone().expect("checked by caller");
+    let trigger = ghost_icon_button(&t, icon, Some(msg.clone()));
+    let header_btn: Element<'a, Message> = match col.header_panel.take() {
+        Some(panel) => popover_aligned(
+            &t,
+            trigger,
+            Some(panel),
+            Horizontal::Right,
+            Some(msg),
+        ),
+        None => trigger,
+    };
+
+    let inner_row = match col.align {
+        Horizontal::Left => row![
+            sort_area,
+            Space::new().width(Length::Fill),
+            header_btn,
+        ],
+        Horizontal::Right => row![
+            Space::new().width(Length::Fill),
+            sort_area,
+            header_btn,
+        ],
+        Horizontal::Center => row![
+            Space::new().width(Length::Fill),
+            sort_area,
+            Space::new().width(Length::Fill),
+            header_btn,
+        ],
+    }
+    .spacing(0)
+    .align_y(Vertical::Center);
+
+    container(inner_row)
+        .width(col.width)
+        .height(Length::Fixed(36.0))
+        .align_y(Vertical::Center)
         .into()
 }

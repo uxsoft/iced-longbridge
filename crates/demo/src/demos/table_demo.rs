@@ -8,9 +8,11 @@ use crate::{
     Message, State,
     components::{
         badge::{badge, BadgeVariant},
+        menu::{menu, Item},
         table::{table_with, Column, ResizeHandlers, SortDir, TableOptions},
     },
     demos::common::{section_caption, section_title, vspace},
+    lucide,
     theme::AppTheme,
 };
 
@@ -69,12 +71,29 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     .width(w(2))
     .align(Horizontal::Left);
 
-    let salary_col = Column::new("Salary", move |p: &Person| {
+    let mut salary_col = Column::new("Salary", move |p: &Person| {
         text(format!("${}", fmt_money(p.salary))).size(13.0).color(t.foreground).into()
     })
     .width(w(3))
     .align(Horizontal::Right)
-    .sortable("salary");
+    .sortable("salary")
+    .header_button(lucide::settings(), Message::TableHeaderButtonToggle(3));
+
+    if state.table_header_menu_open == Some(3) {
+        let panel = menu(
+            theme,
+            vec![
+                Item::new("Hide column", Message::TableHeaderMenuAction("hide"))
+                    .icon(lucide::eye_off()),
+                Item::new("Filter…", Message::TableHeaderMenuAction("filter"))
+                    .icon(lucide::filter()),
+                Item::Separator,
+                Item::new("Reset sort", Message::TableHeaderMenuAction("reset_sort"))
+                    .icon(lucide::refresh_cw()),
+            ],
+        );
+        salary_col = salary_col.header_panel(panel);
+    }
 
     let sort = state.table_sort.map(|(k, d)| (k, match d {
         crate::SortKind::Asc => SortDir::Asc,
@@ -105,7 +124,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         section_title(theme, "Sortable table"),
         section_caption(
             theme,
-            "Click a sortable header to toggle asc/desc ordering. Drag a column divider to resize.",
+            "Click a sortable header to toggle ordering. Use the settings button on the Salary header to open a per-column menu. Drag a divider to resize.",
         ),
         tbl,
         vspace(8.0),
