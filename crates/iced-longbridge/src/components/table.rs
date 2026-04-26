@@ -7,12 +7,7 @@
 //! table(theme, &rows, columns)
 //!     .row_height(44.0)
 //!     .sort(state.sort, Message::Sort)
-//!     .resize(
-//!         state.resize_col,
-//!         Message::ResizeStart,
-//!         Message::ResizeMove,
-//!         Message::ResizeEnd,
-//!     )
+//!     .resize(&state.resize, Message::Resize)
 //!     .into()
 //! ```
 //!
@@ -20,17 +15,22 @@
 //!
 //! ## Resizable columns
 //!
-//! [`Table::resize`] enables drag-to-resize on the boundary between adjacent
-//! columns. The caller owns the per-column width state (as `Length::Fixed` on
-//! each [`Column`]) and updates it from the emitted messages:
+//! [`Table::resize`] enables drag-to-resize on column boundaries. The caller
+//! owns a single [`ResizeState`] value (which carries widths + drag bookkeeping)
+//! and forwards a single [`ResizeEvent`] message back into it:
 //!
-//! - `on_grab(i)` fires when the user presses on the divider *after* column
-//!   `i` — the caller should record `dragging = Some(i)`.
-//! - `on_drag(Point)` fires continuously while the user moves the mouse; the
-//!   caller converts the cursor-x delta to a width change.
-//! - `on_release` fires on mouse-up; the caller clears `dragging`.
+//! ```ignore
+//! // State
+//! pub resize: ResizeState,
 //!
-//! While `dragging.is_some()` the table wraps itself in a full-area mouse
+//! // Update
+//! Message::Resize(event) => state.resize.apply(event),
+//!
+//! // View — read column widths from the state
+//! Column::text("Name", ...).width(state.resize.width(0))
+//! ```
+//!
+//! While a drag is in progress the table wraps itself in a full-area mouse
 //! overlay so the drag keeps working even when the cursor wanders off the
 //! handle.
 
@@ -149,6 +149,92 @@ struct ResizeHandlers<'a, Message> {
     dragging: Option<usize>,
 }
 
+/// Per-column-resize state. Owned by the caller, updated via
+/// [`ResizeState::apply`] from a single message handler.
+#[derive(Debug, Clone)]
+pub struct ResizeState {
+    widths: Vec<f32>,
+    dragging: Option<DragInfo>,
+    min_width: f32,
+    max_width: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DragInfo {
+    col: usize,
+    last_x: Option<f32>,
+}
+
+/// Opaque event emitted by the table during a resize interaction. Forward it
+/// back into [`ResizeState::apply`] from the message handler.
+#[derive(Debug, Clone)]
+pub enum ResizeEvent {
+    Grab(usize),
+    Move(Point),
+    Release,
+}
+
+impl ResizeState {
+    /// Initialize with starting per-column widths (one entry per column).
+    pub fn new(widths: Vec<f32>) -> Self {
+        Self {
+            widths,
+            dragging: None,
+            min_width: 40.0,
+            max_width: f32::INFINITY,
+        }
+    }
+
+    /// Constrain the per-column width during drags. Defaults to `40.0`.
+    pub fn min_width(mut self, w: f32) -> Self {
+        self.min_width = w;
+        self
+    }
+
+    /// Constrain the per-column width during drags. Defaults to unbounded.
+    pub fn max_width(mut self, w: f32) -> Self {
+        self.max_width = w;
+        self
+    }
+
+    /// `Length::Fixed` for the configured column, or `Length::Fill` if the
+    /// index is past the end.
+    pub fn width(&self, col: usize) -> Length {
+        self.widths
+            .get(col)
+            .copied()
+            .map(Length::Fixed)
+            .unwrap_or(Length::Fill)
+    }
+
+    pub fn widths(&self) -> &[f32] {
+        &self.widths
+    }
+
+    /// Apply an event from the table. Call from the message handler.
+    pub fn apply(&mut self, event: ResizeEvent) {
+        match event {
+            ResizeEvent::Grab(col) => {
+                self.dragging = Some(DragInfo { col, last_x: None });
+            }
+            ResizeEvent::Move(p) => {
+                if let Some(drag) = self.dragging.as_mut() {
+                    if let Some(prev) = drag.last_x {
+                        let delta = p.x - prev;
+                        if let Some(w) = self.widths.get_mut(drag.col) {
+                            *w = (*w + delta).clamp(self.min_width, self.max_width);
+                        }
+                    }
+                    drag.last_x = Some(p.x);
+                }
+            }
+            ResizeEvent::Release => {
+                self.dragging = None;
+            }
+        }
+    }
+}
+
 /// Builder produced by [`table`]. Configure with the chained methods, then
 /// convert to an `Element` via `.into()`.
 ///
@@ -206,24 +292,23 @@ impl<'r, 'a, T, Message> Table<'r, 'a, T, Message> {
         self
     }
 
-    /// Enable drag-to-resize on column boundaries. See the module docs for
-    /// the message lifecycle.
-    pub fn resize<G, D>(
-        mut self,
-        dragging: Option<usize>,
-        on_grab: G,
-        on_drag: D,
-        on_release: Message,
-    ) -> Self
+    /// Enable drag-to-resize on column boundaries. The caller owns a
+    /// [`ResizeState`] (typically stored alongside other view state) and
+    /// forwards [`ResizeEvent`]s back into it via `on_event`. See the module
+    /// docs for the full pattern.
+    pub fn resize<F>(mut self, state: &ResizeState, on_event: F) -> Self
     where
-        G: Fn(usize) -> Message + 'a,
-        D: Fn(Point) -> Message + 'a,
+        F: Fn(ResizeEvent) -> Message + 'a,
+        Message: 'a,
     {
+        let on_event = std::rc::Rc::new(on_event);
+        let grab_cb = on_event.clone();
+        let drag_cb = on_event.clone();
         self.resize = Some(ResizeHandlers {
-            on_grab: Box::new(on_grab),
-            on_drag: Box::new(on_drag),
-            on_release,
-            dragging,
+            on_grab: Box::new(move |i| grab_cb(ResizeEvent::Grab(i))),
+            on_drag: Box::new(move |p| drag_cb(ResizeEvent::Move(p))),
+            on_release: on_event(ResizeEvent::Release),
+            dragging: state.dragging.as_ref().map(|d| d.col),
         });
         self
     }
