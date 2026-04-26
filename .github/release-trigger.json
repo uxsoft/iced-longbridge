@@ -1,4 +1,4 @@
 {
-  "tag": "v0.2.0",
-  "notes": "## v0.2.0\n\n### New Features\n\n**Table Builder API** (#9)\n- New `table()` builder replaces `table_with` + `TableOptions` struct — adding options is now non-breaking\n- Callbacks accept `impl Fn` (boxed internally) — eliminates `Box::new(...)` at call sites\n- New `Column::text(header, |row| String)` shortcut for plain-text cells\n- Table header settings button\n- Unified `SortDir` — demo no longer maintains its own `SortKind` enum and conversion shim\n\n**Command Palette**\n- New command palette widget\n\n**SVG & Lucide Icons**\n- SVG icon support\n- Lucide icon set bundled"
+  "tag": "v0.2.1",
+  "notes": "## v0.2.1\n\n### Bug Fixes\n\n**Table resize handles visible in dark mode** (#10)\n- Resize dividers were invisible in dark mode: `t.border` and `t.muted` are both `0x26`, giving zero contrast against the header background\n- Switched divider color to `t.muted_foreground` at `0.35` alpha — subtle vertical rule that contrasts against `muted` in both light and dark themes without per-theme branching"
 }
