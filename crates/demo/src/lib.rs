@@ -120,11 +120,7 @@ pub enum Category {
     Charts,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SortKind {
-    Asc,
-    Desc,
-}
+pub use iced_longbridge::components::table::SortDir;
 
 impl Page {
     pub const ALL: &'static [(Page, &'static str, Category)] = &[
@@ -352,7 +348,7 @@ pub struct State {
     pub toggles: [bool; 6],
 
     // Demo state — data
-    pub table_sort: Option<(&'static str, SortKind)>,
+    pub table_sort: Option<(&'static str, SortDir)>,
     pub table_col_widths: Vec<f32>,
     pub table_resize_col: Option<usize>,
     pub table_resize_last_x: Option<f32>,
@@ -701,9 +697,9 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
         }
         Message::TableSort(key) => {
             state.table_sort = match state.table_sort {
-                Some((k, SortKind::Asc)) if k == key => Some((key, SortKind::Desc)),
-                Some((k, SortKind::Desc)) if k == key => None,
-                _ => Some((key, SortKind::Asc)),
+                Some((k, SortDir::Asc)) if k == key => Some((key, SortDir::Desc)),
+                Some((k, SortDir::Desc)) if k == key => None,
+                _ => Some((key, SortDir::Asc)),
             };
         }
         Message::TableResizeStart(i) => {

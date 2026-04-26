@@ -5,11 +5,11 @@ use iced::{
 };
 
 use crate::{
-    Message, State,
+    Message, SortDir, State,
     components::{
         badge::{badge, BadgeVariant},
         menu::{menu, Item},
-        table::{table_with, Column, ResizeHandlers, SortDir, TableOptions},
+        table::{table, Column},
     },
     demos::common::{section_caption, section_title, vspace},
     lucide,
@@ -48,17 +48,13 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
             .unwrap_or(Length::Fill)
     };
 
-    let name_col = Column::new("Name", move |p: &Person| {
-        text(p.name.to_string()).size(13.0).color(t.foreground).into()
-    })
-    .width(w(0))
-    .sortable("name");
+    let name_col = Column::text("Name", |p: &Person| p.name.to_string())
+        .width(w(0))
+        .sortable("name");
 
-    let role_col = Column::new("Role", move |p: &Person| {
-        text(p.role.to_string()).size(13.0).color(t.muted_foreground).into()
-    })
-    .width(w(1))
-    .sortable("role");
+    let role_col = Column::text("Role", |p: &Person| p.role.to_string())
+        .width(w(1))
+        .sortable("role");
 
     let status_col = Column::new("Status", move |p: &Person| {
         let variant = match p.status {
@@ -71,13 +67,11 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     .width(w(2))
     .align(Horizontal::Left);
 
-    let mut salary_col = Column::new("Salary", move |p: &Person| {
-        text(format!("${}", fmt_money(p.salary))).size(13.0).color(t.foreground).into()
-    })
-    .width(w(3))
-    .align(Horizontal::Right)
-    .sortable("salary")
-    .header_button(lucide::settings(), Message::TableHeaderButtonToggle(3));
+    let mut salary_col = Column::text("Salary", |p: &Person| format!("${}", fmt_money(p.salary)))
+        .width(w(3))
+        .align(Horizontal::Right)
+        .sortable("salary")
+        .header_button(lucide::settings(), Message::TableHeaderButtonToggle(3));
 
     if state.table_header_menu_open == Some(3) {
         let panel = menu(
@@ -95,30 +89,20 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         salary_col = salary_col.header_panel(panel);
     }
 
-    let sort = state.table_sort.map(|(k, d)| (k, match d {
-        crate::SortKind::Asc => SortDir::Asc,
-        crate::SortKind::Desc => SortDir::Desc,
-    }));
-
-    let options = TableOptions {
-        sort,
-        on_sort: Some(Box::new(Message::TableSort)),
-        striped: true,
-        row_height: 44.0,
-        resize: Some(ResizeHandlers {
-            on_grab: Box::new(Message::TableResizeStart),
-            on_drag: Box::new(Message::TableResizeMove),
-            on_release: Message::TableResizeEnd,
-            dragging: state.table_resize_col,
-        }),
-    };
-
-    let tbl = table_with(
+    let tbl: Element<Message> = table(
         theme,
         &rows,
         vec![name_col, role_col, status_col, salary_col],
-        options,
-    );
+    )
+    .row_height(44.0)
+    .sort(state.table_sort, Message::TableSort)
+    .resize(
+        state.table_resize_col,
+        Message::TableResizeStart,
+        Message::TableResizeMove,
+        Message::TableResizeEnd,
+    )
+    .into();
 
     column![
         section_title(theme, "Sortable table"),
@@ -144,7 +128,7 @@ fn sorted_rows(state: &State) -> Vec<Person> {
                 "salary" => a.salary.cmp(&b.salary),
                 _ => std::cmp::Ordering::Equal,
             };
-            if matches!(dir, crate::SortKind::Desc) { ord.reverse() } else { ord }
+            if matches!(dir, SortDir::Desc) { ord.reverse() } else { ord }
         });
     }
     v
