@@ -388,8 +388,14 @@ fn header_divider<'a, Message: Clone + 'a>(
         .height(Length::Fixed(HEADER_HEIGHT))
         .style(move |_| {
             // Subtle vertical rule; only visible when resize is enabled so the
-            // user has an affordance to grab.
-            let bg = if resizable { t.border } else { iced::Color::TRANSPARENT };
+            // user has an affordance to grab. `t.border` collides with the
+            // header's `t.muted` background in dark mode (both 0x26), so use
+            // `muted_foreground` at low alpha for theme-agnostic contrast.
+            let bg = if resizable {
+                iced::Color { a: 0.35, ..t.muted_foreground }
+            } else {
+                iced::Color::TRANSPARENT
+            };
             container::Style {
                 background: Some(Background::Color(bg)),
                 text_color: None,
