@@ -1,14 +1,28 @@
 //! Table — column-and-row layout with typed cells.
 //!
-//! Build columns with [`Column::new`] and render rows from any `Vec<T>` via
-//! [`table`]. Header is a sticky row; body is scrollable.
+//! Build columns with [`Column::new`] (or [`Column::text`] for plain-text
+//! cells) and render rows with the [`table`] builder:
+//!
+//! ```ignore
+//! table(theme, &rows, columns)
+//!     .row_height(44.0)
+//!     .sort(state.sort, Message::Sort)
+//!     .resize(
+//!         state.resize_col,
+//!         Message::ResizeStart,
+//!         Message::ResizeMove,
+//!         Message::ResizeEnd,
+//!     )
+//!     .into()
+//! ```
+//!
+//! Header is a sticky row; body is scrollable.
 //!
 //! ## Resizable columns
 //!
-//! Pass a [`ResizeHandlers`] in [`TableOptions::resize`] to enable drag-to-
-//! resize on the boundary between adjacent columns. The caller owns the
-//! per-column width state (as `Length::Fixed` on each [`Column`]) and updates
-//! it from the emitted messages:
+//! [`Table::resize`] enables drag-to-resize on the boundary between adjacent
+//! columns. The caller owns the per-column width state (as `Length::Fixed` on
+//! each [`Column`]) and updates it from the emitted messages:
 //!
 //! - `on_grab(i)` fires when the user presses on the divider *after* column
 //!   `i` — the caller should record `dragging = Some(i)`.
@@ -21,13 +35,17 @@
 //! handle.
 
 use iced::{
-    Background, Border, Element, Length, Padding, Shadow,
+    Background, Border, Element, Length, Padding, Point, Shadow,
     alignment::{Horizontal, Vertical},
     widget::{column, container, mouse_area, row, scrollable, stack, text, Space},
 };
 
 use crate::{
-    components::icon::{icon_colored, lucide},
+    components::{
+        button::ghost_icon_button,
+        icon::{icon_colored, lucide, Icon},
+        popover::popover_aligned,
+    },
     theme::AppTheme,
 };
 
@@ -40,6 +58,9 @@ const SCROLLBAR_WIDTH: f32 = 10.0;
 /// so header/body columns stay aligned.
 const DIVIDER_WIDTH: f32 = 4.0;
 
+/// Header row height. Matches the body row default for visual balance.
+const HEADER_HEIGHT: f32 = 36.0;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortDir {
     Asc,
@@ -47,26 +68,45 @@ pub enum SortDir {
 }
 
 pub struct Column<'a, T, Message> {
-    pub header: String,
-    pub width: Length,
-    pub align: Horizontal,
+    header: String,
+    width: Length,
+    align: Horizontal,
     #[allow(clippy::type_complexity)]
-    pub render: Box<dyn Fn(&T) -> Element<'a, Message> + 'a>,
-    pub sort_key: Option<&'static str>,
+    render: Box<dyn Fn(&T) -> Element<'a, Message> + 'a>,
+    sort_key: Option<&'static str>,
+    header_button_icon: Option<Icon>,
+    header_button_msg: Option<Message>,
+    header_panel: Option<Element<'a, Message>>,
 }
 
 impl<'a, T, Message> Column<'a, T, Message> {
-    pub fn new(
-        header: impl Into<String>,
-        render: impl Fn(&T) -> Element<'a, Message> + 'a,
-    ) -> Self {
+    pub fn new<F>(header: impl Into<String>, render: F) -> Self
+    where
+        F: Fn(&T) -> Element<'a, Message> + 'a,
+    {
         Self {
             header: header.into(),
             width: Length::Fill,
             align: Horizontal::Left,
             render: Box::new(render),
             sort_key: None,
+            header_button_icon: None,
+            header_button_msg: None,
+            header_panel: None,
         }
+    }
+
+    /// Shortcut for the common case: a plain-text cell. The accessor returns
+    /// a `String` rendered at the standard cell size; the row container's
+    /// `text_color` styles the foreground.
+    pub fn text<F>(header: impl Into<String>, accessor: F) -> Self
+    where
+        F: Fn(&T) -> String + 'a,
+        Message: 'a,
+    {
+        Self::new(header, move |row| {
+            iced::widget::text(accessor(row)).size(13.0).into()
+        })
     }
 
     pub fn width(mut self, w: Length) -> Self {
@@ -83,121 +123,146 @@ impl<'a, T, Message> Column<'a, T, Message> {
         self.sort_key = Some(key);
         self
     }
-}
 
-/// Drag-to-resize wiring for column boundaries. See module docs for the
-/// lifecycle.
-pub struct ResizeHandlers<'a, Message> {
-    /// Mouse-down on the divider between column `i` and `i + 1`.
-    pub on_grab: Box<dyn Fn(usize) -> Message + 'a>,
-    /// Mouse moved while the caller is in a dragging state.
-    pub on_drag: Box<dyn Fn(iced::Point) -> Message + 'a>,
-    /// Mouse released (while dragging).
-    pub on_release: Message,
-    /// Index of the column currently being dragged, or `None` when idle.
-    pub dragging: Option<usize>,
-}
+    /// Add an icon button to this column's header. Composed next to the
+    /// title/sort area so it stays independently clickable when the column
+    /// is also `sortable`.
+    pub fn header_button(mut self, icon: impl Into<Icon>, on_press: Message) -> Self {
+        self.header_button_icon = Some(icon.into());
+        self.header_button_msg = Some(on_press);
+        self
+    }
 
-pub struct TableOptions<'a, Message> {
-    pub sort: Option<(&'static str, SortDir)>,
-    pub on_sort: Option<Box<dyn Fn(&'static str) -> Message + 'a>>,
-    pub striped: bool,
-    pub row_height: f32,
-    pub resize: Option<ResizeHandlers<'a, Message>>,
-}
-
-impl<'a, Message> Default for TableOptions<'a, Message> {
-    fn default() -> Self {
-        Self {
-            sort: None,
-            on_sort: None,
-            striped: true,
-            row_height: 40.0,
-            resize: None,
-        }
+    /// Attach a floating panel (e.g. a `menu()`) anchored beneath the header
+    /// button. The same `on_press` message also fires on outside-click to
+    /// dismiss, so a single toggle message can drive open/close.
+    pub fn header_panel(mut self, panel: impl Into<Element<'a, Message>>) -> Self {
+        self.header_panel = Some(panel.into());
+        self
     }
 }
 
-#[allow(dead_code)]
-pub fn table<'a, T, Message: Clone + 'a>(
-    theme: &AppTheme,
-    rows: &[T],
-    columns: Vec<Column<'a, T, Message>>,
-) -> Element<'a, Message> {
-    table_with(theme, rows, columns, TableOptions::default())
+struct ResizeHandlers<'a, Message> {
+    on_grab: Box<dyn Fn(usize) -> Message + 'a>,
+    on_drag: Box<dyn Fn(Point) -> Message + 'a>,
+    on_release: Message,
+    dragging: Option<usize>,
 }
 
-pub fn table_with<'a, T, Message: Clone + 'a>(
-    theme: &AppTheme,
-    rows: &[T],
+/// Builder produced by [`table`]. Configure with the chained methods, then
+/// convert to an `Element` via `.into()`.
+///
+/// `'r` is the rows borrow; `'a` is the lifetime of column closures and other
+/// captured callbacks. The two are kept separate so the produced `Element`
+/// (lifetime `'a`) doesn't appear to borrow `rows`.
+pub struct Table<'r, 'a, T, Message> {
+    theme: AppTheme,
+    rows: &'r [T],
     columns: Vec<Column<'a, T, Message>>,
-    options: TableOptions<'a, Message>,
-) -> Element<'a, Message> {
-    let t = *theme;
-    let TableOptions {
+    sort: Option<(&'static str, SortDir)>,
+    on_sort: Option<Box<dyn Fn(&'static str) -> Message + 'a>>,
+    striped: bool,
+    row_height: f32,
+    resize: Option<ResizeHandlers<'a, Message>>,
+}
+
+pub fn table<'r, 'a, T, Message>(
+    theme: &AppTheme,
+    rows: &'r [T],
+    columns: Vec<Column<'a, T, Message>>,
+) -> Table<'r, 'a, T, Message> {
+    Table {
+        theme: *theme,
+        rows,
+        columns,
+        sort: None,
+        on_sort: None,
+        striped: true,
+        row_height: 40.0,
+        resize: None,
+    }
+}
+
+impl<'r, 'a, T, Message> Table<'r, 'a, T, Message> {
+    pub fn striped(mut self, on: bool) -> Self {
+        self.striped = on;
+        self
+    }
+
+    pub fn row_height(mut self, h: f32) -> Self {
+        self.row_height = h;
+        self
+    }
+
+    /// Wire up sortable columns. `current` is the active sort, or `None` if
+    /// the table is unsorted; `on_sort` fires when the user clicks a sortable
+    /// header.
+    pub fn sort<F>(mut self, current: Option<(&'static str, SortDir)>, on_sort: F) -> Self
+    where
+        F: Fn(&'static str) -> Message + 'a,
+    {
+        self.sort = current;
+        self.on_sort = Some(Box::new(on_sort));
+        self
+    }
+
+    /// Enable drag-to-resize on column boundaries. See the module docs for
+    /// the message lifecycle.
+    pub fn resize<G, D>(
+        mut self,
+        dragging: Option<usize>,
+        on_grab: G,
+        on_drag: D,
+        on_release: Message,
+    ) -> Self
+    where
+        G: Fn(usize) -> Message + 'a,
+        D: Fn(Point) -> Message + 'a,
+    {
+        self.resize = Some(ResizeHandlers {
+            on_grab: Box::new(on_grab),
+            on_drag: Box::new(on_drag),
+            on_release,
+            dragging,
+        });
+        self
+    }
+}
+
+impl<'r, 'a, T, Message> From<Table<'r, 'a, T, Message>> for Element<'a, Message>
+where
+    Message: Clone + 'a,
+    T: 'r,
+{
+    fn from(table: Table<'r, 'a, T, Message>) -> Self {
+        render(table)
+    }
+}
+
+fn render<'r, 'a, T, Message>(table: Table<'r, 'a, T, Message>) -> Element<'a, Message>
+where
+    Message: Clone + 'a,
+    T: 'r,
+{
+    let Table {
+        theme: t,
+        rows,
+        mut columns,
         sort,
         on_sort,
         striped,
         row_height,
         resize,
-    } = options;
+    } = table;
     let col_count = columns.len();
 
     // Header row.
     let mut header = row![].spacing(0);
-    for (i, col) in columns.iter().enumerate() {
+    for (i, col) in columns.iter_mut().enumerate() {
         let is_sorted = sort.map(|(k, _)| Some(k) == col.sort_key).unwrap_or(false);
         let sort_dir = if is_sorted { sort.map(|(_, d)| d) } else { None };
 
-        let mut inner = row![text(col.header.clone()).size(12.0).color(t.muted_foreground)]
-            .spacing(6)
-            .align_y(Vertical::Center);
-        if let Some(dir) = sort_dir {
-            inner = inner.push(icon_colored::<Message>(
-                match dir {
-                    SortDir::Asc => lucide::arrow_up_narrow_wide(),
-                    SortDir::Desc => lucide::arrow_down_wide_narrow(),
-                },
-                11.0,
-                t.muted_foreground,
-            ));
-        }
-
-        let cell = container(inner)
-            .padding(Padding::from([0.0, 12.0]))
-            .width(col.width)
-            .height(Length::Fixed(36.0))
-            .align_x(col.align)
-            .align_y(Vertical::Center);
-
-        // Sortable cells are wrapped in a button that emits on_sort.
-        let cell_el: Element<Message> = match (col.sort_key, on_sort.as_ref()) {
-            (Some(key), Some(cb)) => {
-                let msg = cb(key);
-                iced::widget::button(cell)
-                    .padding(0)
-                    .on_press(msg)
-                    .style(move |_, status| {
-                        use iced::widget::button::Status::*;
-                        let bg = match status {
-                            Hovered => t.accent,
-                            Pressed => t.muted,
-                            _ => iced::Color::TRANSPARENT,
-                        };
-                        iced::widget::button::Style {
-                            background: Some(Background::Color(bg)),
-                            text_color: t.foreground,
-                            border: Border::default(),
-                            shadow: Shadow::default(),
-                            snap: true,
-                        }
-                    })
-                    .into()
-            }
-            _ => cell.into(),
-        };
-
-        header = header.push(cell_el);
+        header = header.push(build_header_cell(&t, col, sort_dir, on_sort.as_deref()));
 
         if i + 1 < col_count {
             header = header.push(header_divider(&t, resize.as_ref(), i));
@@ -208,17 +273,7 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
     let header_bar = container(header)
         .width(Length::Fill)
         .padding(Padding::default().right(SCROLLBAR_WIDTH))
-        .style(move |_| container::Style {
-            background: Some(Background::Color(t.muted)),
-            text_color: Some(t.muted_foreground),
-            border: Border {
-                color: t.border,
-                width: 0.0,
-                radius: 0.0.into(),
-            },
-            shadow: Shadow::default(),
-            snap: true,
-        });
+        .style(move |_| solid_bg(t.muted, t.muted_foreground, t.border));
 
     // Body rows.
     let mut body = column![].spacing(0);
@@ -237,24 +292,11 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
             }
         }
         let zebra = striped && i % 2 == 1;
+        let bg = if zebra { t.muted } else { t.background };
         body = body.push(
             container(r)
                 .width(Length::Fill)
-                .style(move |_| container::Style {
-                    background: Some(Background::Color(if zebra {
-                        t.muted
-                    } else {
-                        t.background
-                    })),
-                    text_color: Some(t.foreground),
-                    border: Border {
-                        color: t.border,
-                        width: 0.0,
-                        radius: 0.0.into(),
-                    },
-                    shadow: Shadow::default(),
-                    snap: true,
-                }),
+                .style(move |_| solid_bg(bg, t.foreground, t.border)),
         );
     }
 
@@ -319,6 +361,20 @@ pub fn table_with<'a, T, Message: Clone + 'a>(
     }
 }
 
+fn solid_bg(bg: iced::Color, fg: iced::Color, border: iced::Color) -> container::Style {
+    container::Style {
+        background: Some(Background::Color(bg)),
+        text_color: Some(fg),
+        border: Border {
+            color: border,
+            width: 0.0,
+            radius: 0.0.into(),
+        },
+        shadow: Shadow::default(),
+        snap: true,
+    }
+}
+
 /// Divider strip between two header cells. Clickable when resize is enabled.
 fn header_divider<'a, Message: Clone + 'a>(
     t: &AppTheme,
@@ -329,7 +385,7 @@ fn header_divider<'a, Message: Clone + 'a>(
     let resizable = resize.is_some();
     let base = container(Space::new().width(Length::Fixed(DIVIDER_WIDTH)).height(Length::Fill))
         .width(Length::Fixed(DIVIDER_WIDTH))
-        .height(Length::Fixed(36.0))
+        .height(Length::Fixed(HEADER_HEIGHT))
         .style(move |_| {
             // Subtle vertical rule; only visible when resize is enabled so the
             // user has an affordance to grab.
@@ -360,4 +416,135 @@ fn body_divider<'a, Message: 'a>(row_height: f32) -> Element<'a, Message> {
         .width(Length::Fixed(DIVIDER_WIDTH))
         .height(Length::Fixed(row_height))
         .into()
+}
+
+/// Title row (header text + optional sort arrow).
+fn title_row<'a, Message: 'a>(
+    t: AppTheme,
+    header: &str,
+    sort_dir: Option<SortDir>,
+) -> iced::widget::Row<'a, Message> {
+    let mut inner = row![text(header.to_string()).size(12.0).color(t.muted_foreground)]
+        .spacing(6)
+        .align_y(Vertical::Center);
+    if let Some(dir) = sort_dir {
+        inner = inner.push(icon_colored::<Message>(
+            match dir {
+                SortDir::Asc => lucide::arrow_up_narrow_wide(),
+                SortDir::Desc => lucide::arrow_down_wide_narrow(),
+            },
+            11.0,
+            t.muted_foreground,
+        ));
+    }
+    inner
+}
+
+/// Wrap `content` in a sort-toggle button if the column is sortable and
+/// `on_sort` is wired; otherwise return `content` (in a padded container if
+/// `pad` is set).
+fn maybe_sort_button<'a, Message: Clone + 'a>(
+    t: AppTheme,
+    content: Element<'a, Message>,
+    sort_key: Option<&'static str>,
+    on_sort: Option<&(dyn Fn(&'static str) -> Message + 'a)>,
+    button_padding: Padding,
+    fallback_padding: Option<Padding>,
+) -> Element<'a, Message> {
+    match (sort_key, on_sort) {
+        (Some(key), Some(cb)) => {
+            let msg = cb(key);
+            iced::widget::button(content)
+                .padding(button_padding)
+                .on_press(msg)
+                .style(move |_, status| {
+                    use iced::widget::button::Status::*;
+                    let bg = match status {
+                        Hovered => t.accent,
+                        Pressed => t.muted,
+                        _ => iced::Color::TRANSPARENT,
+                    };
+                    iced::widget::button::Style {
+                        background: Some(Background::Color(bg)),
+                        text_color: t.foreground,
+                        border: Border::default(),
+                        shadow: Shadow::default(),
+                        snap: true,
+                    }
+                })
+                .into()
+        }
+        _ => match fallback_padding {
+            Some(p) => container(content).padding(p).into(),
+            None => content,
+        },
+    }
+}
+
+/// Build a single header cell. When the column has a `header_button`, the
+/// title/sort area and the icon button are siblings so each is hit-tested
+/// independently; otherwise the whole cell is the sort click target.
+fn build_header_cell<'a, T, Message: Clone + 'a>(
+    t: &AppTheme,
+    col: &mut Column<'a, T, Message>,
+    sort_dir: Option<SortDir>,
+    on_sort: Option<&(dyn Fn(&'static str) -> Message + 'a)>,
+) -> Element<'a, Message> {
+    let t = *t;
+    let title: Element<Message> = title_row(t, &col.header, sort_dir).into();
+
+    if col.header_button_icon.is_some() {
+        // Title-only sort button (small click target) + sibling icon button.
+        let sort_area = maybe_sort_button(
+            t,
+            title,
+            col.sort_key,
+            on_sort,
+            Padding::from([0.0, 12.0]),
+            Some(Padding::from([0.0, 12.0])),
+        );
+
+        let icon = col.header_button_icon.clone().expect("checked above");
+        let msg = col.header_button_msg.clone().expect("paired with icon");
+        let trigger = ghost_icon_button(&t, icon, Some(msg.clone()));
+        let header_btn: Element<'a, Message> = match col.header_panel.take() {
+            Some(panel) => popover_aligned(&t, trigger, Some(panel), Horizontal::Right, Some(msg)),
+            None => trigger,
+        };
+
+        let inner_row = match col.align {
+            Horizontal::Left => row![sort_area, Space::new().width(Length::Fill), header_btn],
+            Horizontal::Right => row![Space::new().width(Length::Fill), sort_area, header_btn],
+            Horizontal::Center => row![
+                Space::new().width(Length::Fill),
+                sort_area,
+                Space::new().width(Length::Fill),
+                header_btn,
+            ],
+        }
+        .spacing(0)
+        .align_y(Vertical::Center);
+
+        container(inner_row)
+            .width(col.width)
+            .height(Length::Fixed(HEADER_HEIGHT))
+            .align_y(Vertical::Center)
+            .into()
+    } else {
+        // Whole cell is the sort click target.
+        let cell = container(title)
+            .padding(Padding::from([0.0, 12.0]))
+            .width(col.width)
+            .height(Length::Fixed(HEADER_HEIGHT))
+            .align_x(col.align)
+            .align_y(Vertical::Center);
+        maybe_sort_button(
+            t,
+            cell.into(),
+            col.sort_key,
+            on_sort,
+            Padding::from(0),
+            None,
+        )
+    }
 }
