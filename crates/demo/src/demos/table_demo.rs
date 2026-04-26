@@ -1,5 +1,5 @@
 use iced::{
-    Element, Length,
+    Element,
     alignment::Horizontal,
     widget::{column, text},
 };
@@ -39,21 +39,12 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     let t = *theme;
     let rows = sorted_rows(state);
 
-    let w = |i: usize| {
-        state
-            .table_col_widths
-            .get(i)
-            .copied()
-            .map(Length::Fixed)
-            .unwrap_or(Length::Fill)
-    };
-
     let name_col = Column::text("Name", |p: &Person| p.name.to_string())
-        .width(w(0))
+        .width(state.table_resize.width(0))
         .sortable("name");
 
     let role_col = Column::text("Role", |p: &Person| p.role.to_string())
-        .width(w(1))
+        .width(state.table_resize.width(1))
         .sortable("role");
 
     let status_col = Column::new("Status", move |p: &Person| {
@@ -64,11 +55,11 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         };
         badge(&t, p.status.to_string(), variant)
     })
-    .width(w(2))
+    .width(state.table_resize.width(2))
     .align(Horizontal::Left);
 
     let mut salary_col = Column::text("Salary", |p: &Person| format!("${}", fmt_money(p.salary)))
-        .width(w(3))
+        .width(state.table_resize.width(3))
         .align(Horizontal::Right)
         .sortable("salary")
         .header_button(lucide::settings(), Message::TableHeaderButtonToggle(3));
@@ -96,12 +87,7 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     )
     .row_height(44.0)
     .sort(state.table_sort, Message::TableSort)
-    .resize(
-        state.table_resize_col,
-        Message::TableResizeStart,
-        Message::TableResizeMove,
-        Message::TableResizeEnd,
-    )
+    .resize(&state.table_resize, Message::TableResize)
     .into();
 
     column![

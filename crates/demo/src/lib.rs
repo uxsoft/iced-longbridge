@@ -266,9 +266,7 @@ pub enum Message {
 
     // Data (Phase 3)
     TableSort(&'static str),
-    TableResizeStart(usize),
-    TableResizeMove(iced::Point),
-    TableResizeEnd,
+    TableResize(iced_longbridge::components::table::ResizeEvent),
     TableHeaderButtonToggle(usize),
     TableHeaderMenuAction(&'static str),
     ListSelected(usize),
@@ -349,9 +347,7 @@ pub struct State {
 
     // Demo state — data
     pub table_sort: Option<(&'static str, SortDir)>,
-    pub table_col_widths: Vec<f32>,
-    pub table_resize_col: Option<usize>,
-    pub table_resize_last_x: Option<f32>,
+    pub table_resize: iced_longbridge::components::table::ResizeState,
     pub table_header_menu_open: Option<usize>,
     pub list_selected: usize,
     pub data_table: crate::components::data_table::DataTable,
@@ -455,9 +451,11 @@ impl Default for State {
             button_group: 0,
             toggles: [true, false, false, false, false, false],
             table_sort: None,
-            table_col_widths: vec![220.0, 220.0, 140.0, 140.0],
-            table_resize_col: None,
-            table_resize_last_x: None,
+            table_resize: iced_longbridge::components::table::ResizeState::new(vec![
+                220.0, 220.0, 140.0, 140.0,
+            ])
+            .min_width(60.0)
+            .max_width(600.0),
             table_header_menu_open: None,
             list_selected: 0,
             data_table: build_sample_data_table(),
@@ -702,25 +700,7 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
                 _ => Some((key, SortDir::Asc)),
             };
         }
-        Message::TableResizeStart(i) => {
-            state.table_resize_col = Some(i);
-            state.table_resize_last_x = None;
-        }
-        Message::TableResizeMove(pt) => {
-            if let Some(i) = state.table_resize_col {
-                if let Some(last) = state.table_resize_last_x {
-                    let delta = pt.x - last;
-                    if let Some(w) = state.table_col_widths.get_mut(i) {
-                        *w = (*w + delta).clamp(60.0, 600.0);
-                    }
-                }
-                state.table_resize_last_x = Some(pt.x);
-            }
-        }
-        Message::TableResizeEnd => {
-            state.table_resize_col = None;
-            state.table_resize_last_x = None;
-        }
+        Message::TableResize(event) => state.table_resize.apply(event),
         Message::TableHeaderButtonToggle(i) => {
             state.table_header_menu_open =
                 if state.table_header_menu_open == Some(i) { None } else { Some(i) };
