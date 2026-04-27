@@ -45,6 +45,7 @@ use crate::{
         button::ghost_icon_button,
         icon::{icon_colored, lucide, Icon},
         popover::popover_aligned,
+        tooltip::wrap as tooltip_wrap,
     },
     theme::AppTheme,
 };
@@ -76,6 +77,7 @@ pub struct Column<'a, T, Message> {
     sort_key: Option<&'static str>,
     header_button_icon: Option<Icon>,
     header_button_msg: Option<Message>,
+    header_button_tooltip: Option<String>,
     header_panel: Option<Element<'a, Message>>,
 }
 
@@ -92,6 +94,7 @@ impl<'a, T, Message> Column<'a, T, Message> {
             sort_key: None,
             header_button_icon: None,
             header_button_msg: None,
+            header_button_tooltip: None,
             header_panel: None,
         }
     }
@@ -130,6 +133,12 @@ impl<'a, T, Message> Column<'a, T, Message> {
     pub fn header_button(mut self, icon: impl Into<Icon>, on_press: Message) -> Self {
         self.header_button_icon = Some(icon.into());
         self.header_button_msg = Some(on_press);
+        self
+    }
+
+    /// Optional tooltip shown when hovering over the header button.
+    pub fn header_button_tooltip(mut self, label: impl Into<String>) -> Self {
+        self.header_button_tooltip = Some(label.into());
         self
     }
 
@@ -597,7 +606,10 @@ fn build_header_cell<'a, T, Message: Clone + 'a>(
 
         let icon = col.header_button_icon.clone().expect("checked above");
         let msg = col.header_button_msg.clone().expect("paired with icon");
-        let trigger = ghost_icon_button(&t, icon, Some(msg.clone()));
+        let mut trigger = ghost_icon_button(&t, icon, Some(msg.clone()));
+        if let Some(label) = col.header_button_tooltip.clone() {
+            trigger = tooltip_wrap(&t, trigger, label).into();
+        }
         let header_btn: Element<'a, Message> = match col.header_panel.take() {
             Some(panel) => popover_aligned(&t, trigger, Some(panel), Horizontal::Right, Some(msg)),
             None => trigger,

@@ -62,7 +62,8 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         .width(state.table_resize.width(3))
         .align(Horizontal::Right)
         .sortable("salary")
-        .header_button(lucide::settings(), Message::TableHeaderButtonToggle(3));
+        .header_button(lucide::settings(), Message::TableHeaderButtonToggle(3))
+        .header_button_tooltip("Column settings");
 
     if state.table_header_menu_open == Some(3) {
         let panel = menu(
