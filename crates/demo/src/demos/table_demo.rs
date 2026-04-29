@@ -9,7 +9,7 @@ use crate::{
     components::{
         badge::{badge, BadgeVariant},
         menu::{menu, Item},
-        table::{table, Column},
+        table::{table, Column, RowStyle},
     },
     demos::common::{section_caption, section_title, vspace},
     lucide,
@@ -81,6 +81,9 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         salary_col = salary_col.header_panel(panel);
     }
 
+    let pressed = state.table_row_pressed;
+    let highlight = iced::Color { a: 0.20, ..t.primary };
+
     let tbl: Element<Message> = table(
         theme,
         &rows,
@@ -89,17 +92,30 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
     .row_height(44.0)
     .sort(state.table_sort, Message::TableSort)
     .resize(&state.table_resize, Message::TableResize)
+    .row_style(move |i, _p| RowStyle {
+        background: if Some(i) == pressed { Some(highlight) } else { None },
+        text_color: None,
+    })
+    .on_row_press(Message::TableRowPress)
+    .navigation(Message::TableNav)
     .into();
+
+    let pressed_label = match pressed {
+        Some(i) => format!("Last clicked row: #{i}"),
+        None => "Click a row to select it.".to_string(),
+    };
 
     column![
         section_title(theme, "Sortable table"),
         section_caption(
             theme,
-            "Click a sortable header to toggle ordering. Use the settings button on the Salary header to open a per-column menu. Drag a divider to resize.",
+            "Click a sortable header to toggle ordering. Use the settings button on the Salary header to open a per-column menu. Drag a divider to resize. Click any row to highlight it. While the table has focus (click anywhere inside): ↑/↓, Home/End, PgUp/PgDn move the cursor; Enter activates.",
         ),
         tbl,
         vspace(8.0),
-        text(format!("{} people", rows.len())).size(12.0).color(theme.muted_foreground),
+        text(format!("{} people · {pressed_label}", rows.len()))
+            .size(12.0)
+            .color(theme.muted_foreground),
     ]
     .spacing(10)
     .into()

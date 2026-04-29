@@ -35,8 +35,16 @@
 //! handle.
 
 use iced::{
-    Background, Border, Element, Length, Padding, Point, Shadow,
+    Background, Border, Element, Event, Length, Padding, Point, Rectangle, Shadow, Size,
+    advanced::{
+        Clipboard, Layout, Shell, Widget,
+        layout::{self, Limits},
+        mouse,
+        renderer,
+        widget::{Tree, tree},
+    },
     alignment::{Horizontal, Vertical},
+    keyboard,
     widget::{column, container, mouse_area, row, scrollable, stack, text, Space},
 };
 
@@ -66,6 +74,48 @@ const HEADER_HEIGHT: f32 = 36.0;
 pub enum SortDir {
     Asc,
     Desc,
+}
+
+/// Per-row visual override returned from [`Table::row_style`]. `None` fields
+/// fall back to the table's defaults (zebra striping + theme foreground).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RowStyle {
+    pub background: Option<iced::Color>,
+    pub text_color: Option<iced::Color>,
+}
+
+/// Keyboard-navigation event emitted by [`Table::navigation`] when the table
+/// has focus. The caller decides what each one means for its row state —
+/// e.g. `PageUp/PageDown` typically advance the cursor by ~10 rows, but the
+/// table itself doesn't know your viewport size.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NavEvent {
+    Up,
+    Down,
+    Home,
+    End,
+    PageUp,
+    PageDown,
+    /// Enter pressed — typically maps to "press the focused row".
+    Activate,
+}
+
+fn key_to_nav(key: &keyboard::Key) -> Option<NavEvent> {
+    use keyboard::key::Named;
+    let named = match key {
+        keyboard::Key::Named(n) => n,
+        _ => return None,
+    };
+    Some(match named {
+        Named::ArrowUp => NavEvent::Up,
+        Named::ArrowDown => NavEvent::Down,
+        Named::Home => NavEvent::Home,
+        Named::End => NavEvent::End,
+        Named::PageUp => NavEvent::PageUp,
+        Named::PageDown => NavEvent::PageDown,
+        Named::Enter => NavEvent::Activate,
+        _ => return None,
+    })
 }
 
 pub struct Column<'a, T, Message> {
@@ -259,6 +309,10 @@ pub struct Table<'r, 'a, T, Message> {
     striped: bool,
     row_height: f32,
     resize: Option<ResizeHandlers<'a, Message>>,
+    #[allow(clippy::type_complexity)]
+    row_style: Option<Box<dyn Fn(usize, &T) -> RowStyle + 'a>>,
+    on_row_press: Option<Box<dyn Fn(usize) -> Message + 'a>>,
+    on_nav: Option<Box<dyn Fn(NavEvent) -> Message + 'a>>,
 }
 
 pub fn table<'r, 'a, T, Message>(
@@ -275,6 +329,9 @@ pub fn table<'r, 'a, T, Message>(
         striped: true,
         row_height: 40.0,
         resize: None,
+        row_style: None,
+        on_row_press: None,
+        on_nav: None,
     }
 }
 
@@ -298,6 +355,44 @@ impl<'r, 'a, T, Message> Table<'r, 'a, T, Message> {
     {
         self.sort = current;
         self.on_sort = Some(Box::new(on_sort));
+        self
+    }
+
+    /// Override the default zebra striping per row. Returning a [`RowStyle`]
+    /// with `None` fields falls back to the table's defaults (zebra background
+    /// and theme foreground), so callers can tint only the rows that need it.
+    pub fn row_style<F>(mut self, f: F) -> Self
+    where
+        F: Fn(usize, &T) -> RowStyle + 'a,
+    {
+        self.row_style = Some(Box::new(f));
+        self
+    }
+
+    /// Fire `f(i)` when any cell in row `i` is clicked. Wraps each row in a
+    /// `mouse_area` with `Interaction::Pointer` so the cursor signals
+    /// clickability.
+    pub fn on_row_press<F>(mut self, f: F) -> Self
+    where
+        F: Fn(usize) -> Message + 'a,
+    {
+        self.on_row_press = Some(Box::new(f));
+        self
+    }
+
+    /// Wire keyboard navigation. When set, the rendered table claims focus on
+    /// left-click anywhere inside its bounds (and releases focus on a click
+    /// outside), and translates Up/Down/Home/End/PageUp/PageDown/Enter into
+    /// [`NavEvent`]s while focused. Other keys fall through.
+    ///
+    /// The caller owns the focused-row index — keep it in your view state and
+    /// reflect it visually via [`Table::row_style`]. `PageUp` / `PageDown`
+    /// don't carry a row count; the caller decides how many rows to advance.
+    pub fn navigation<F>(mut self, on_nav: F) -> Self
+    where
+        F: Fn(NavEvent) -> Message + 'a,
+    {
+        self.on_nav = Some(Box::new(on_nav));
         self
     }
 
@@ -347,6 +442,9 @@ where
         striped,
         row_height,
         resize,
+        row_style,
+        on_row_press,
+        on_nav,
     } = table;
     let col_count = columns.len();
 
@@ -385,13 +483,32 @@ where
                 r = r.push(body_divider(row_height));
             }
         }
+
         let zebra = striped && i % 2 == 1;
-        let bg = if zebra { t.muted } else { t.background };
-        body = body.push(
-            container(r)
-                .width(Length::Fill)
-                .style(move |_| solid_bg(bg, t.foreground, t.border)),
-        );
+        let mut bg = if zebra { t.muted } else { t.background };
+        let mut fg = t.foreground;
+        if let Some(rs) = row_style.as_deref() {
+            let s = rs(i, data);
+            if let Some(c) = s.background {
+                bg = c;
+            }
+            if let Some(c) = s.text_color {
+                fg = c;
+            }
+        }
+
+        let row_container = container(r)
+            .width(Length::Fill)
+            .style(move |_| solid_bg(bg, fg, t.border));
+
+        let row_el: Element<Message> = match on_row_press.as_deref() {
+            Some(cb) => mouse_area(row_container)
+                .on_press(cb(i))
+                .interaction(iced::mouse::Interaction::Pointer)
+                .into(),
+            None => row_container.into(),
+        };
+        body = body.push(row_el);
     }
 
     if rows.is_empty() {
@@ -435,7 +552,7 @@ where
     // When a drag is in progress, overlay a transparent mouse catcher so the
     // move/release events keep flowing even if the cursor leaves the narrow
     // handle.
-    match resize {
+    let table_el = match resize {
         Some(rh) if rh.dragging.is_some() => {
             let ResizeHandlers {
                 on_drag,
@@ -452,6 +569,15 @@ where
             stack![table_el, catcher].into()
         }
         _ => table_el,
+    };
+
+    // Wrap in a keyboard-capture widget if navigation is wired.
+    match on_nav {
+        Some(on_nav) => Element::new(KeyboardCapture {
+            inner: table_el,
+            on_nav,
+        }),
+        None => table_el,
     }
 }
 
@@ -648,6 +774,171 @@ fn build_header_cell<'a, T, Message: Clone + 'a>(
             on_sort,
             Padding::from(0),
             None,
+        )
+    }
+}
+
+/// Internal wrapper that gives the table keyboard focus on click and emits
+/// [`NavEvent`]s while focused. Boilerplate-heavy because there is no generic
+/// "focusable container" in iced 0.14 — it's all in `update`.
+struct KeyboardCapture<'a, Message> {
+    inner: Element<'a, Message>,
+    on_nav: Box<dyn Fn(NavEvent) -> Message + 'a>,
+}
+
+#[derive(Default)]
+struct KeyboardCaptureState {
+    focused: bool,
+}
+
+impl<Message> Widget<Message, iced::Theme, iced::Renderer> for KeyboardCapture<'_, Message>
+where
+    Message: Clone,
+{
+    fn tag(&self) -> tree::Tag {
+        tree::Tag::of::<KeyboardCaptureState>()
+    }
+
+    fn state(&self) -> tree::State {
+        tree::State::new(KeyboardCaptureState::default())
+    }
+
+    fn children(&self) -> Vec<Tree> {
+        vec![Tree::new(&self.inner)]
+    }
+
+    fn diff(&self, tree: &mut Tree) {
+        tree.diff_children(&[self.inner.as_widget()]);
+    }
+
+    fn size(&self) -> Size<Length> {
+        self.inner.as_widget().size()
+    }
+
+    fn size_hint(&self) -> Size<Length> {
+        self.inner.as_widget().size_hint()
+    }
+
+    fn layout(
+        &mut self,
+        tree: &mut Tree,
+        renderer: &iced::Renderer,
+        limits: &Limits,
+    ) -> layout::Node {
+        self.inner
+            .as_widget_mut()
+            .layout(&mut tree.children[0], renderer, limits)
+    }
+
+    fn update(
+        &mut self,
+        tree: &mut Tree,
+        event: &Event,
+        layout: Layout<'_>,
+        cursor: mouse::Cursor,
+        renderer: &iced::Renderer,
+        clipboard: &mut dyn Clipboard,
+        shell: &mut Shell<'_, Message>,
+        viewport: &Rectangle,
+    ) {
+        // Track focus from left-clicks: gain on click inside, lose on click
+        // outside. Run before the inner update so the focus flag reflects this
+        // event's click target by the time any nav key (theoretically same
+        // frame) is checked.
+        if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) = event {
+            let state = tree.state.downcast_mut::<KeyboardCaptureState>();
+            state.focused = cursor.is_over(layout.bounds());
+        }
+
+        // While focused, intercept navigation keys before they reach the
+        // inner tree. Other keys fall through.
+        if let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event {
+            let focused = tree.state.downcast_ref::<KeyboardCaptureState>().focused;
+            if focused
+                && let Some(nav) = key_to_nav(key)
+            {
+                shell.publish((self.on_nav)(nav));
+                shell.capture_event();
+                return;
+            }
+        }
+
+        self.inner.as_widget_mut().update(
+            &mut tree.children[0],
+            event,
+            layout,
+            cursor,
+            renderer,
+            clipboard,
+            shell,
+            viewport,
+        );
+    }
+
+    fn mouse_interaction(
+        &self,
+        tree: &Tree,
+        layout: Layout<'_>,
+        cursor: mouse::Cursor,
+        viewport: &Rectangle,
+        renderer: &iced::Renderer,
+    ) -> mouse::Interaction {
+        self.inner.as_widget().mouse_interaction(
+            &tree.children[0],
+            layout,
+            cursor,
+            viewport,
+            renderer,
+        )
+    }
+
+    fn draw(
+        &self,
+        tree: &Tree,
+        renderer: &mut iced::Renderer,
+        theme: &iced::Theme,
+        style: &renderer::Style,
+        layout: Layout<'_>,
+        cursor: mouse::Cursor,
+        viewport: &Rectangle,
+    ) {
+        self.inner.as_widget().draw(
+            &tree.children[0],
+            renderer,
+            theme,
+            style,
+            layout,
+            cursor,
+            viewport,
+        );
+    }
+
+    fn operate(
+        &mut self,
+        tree: &mut Tree,
+        layout: Layout<'_>,
+        renderer: &iced::Renderer,
+        operation: &mut dyn iced::advanced::widget::Operation,
+    ) {
+        self.inner
+            .as_widget_mut()
+            .operate(&mut tree.children[0], layout, renderer, operation);
+    }
+
+    fn overlay<'b>(
+        &'b mut self,
+        tree: &'b mut Tree,
+        layout: Layout<'b>,
+        renderer: &iced::Renderer,
+        viewport: &Rectangle,
+        translation: iced::Vector,
+    ) -> Option<iced::advanced::overlay::Element<'b, Message, iced::Theme, iced::Renderer>> {
+        self.inner.as_widget_mut().overlay(
+            &mut tree.children[0],
+            layout,
+            renderer,
+            viewport,
+            translation,
         )
     }
 }

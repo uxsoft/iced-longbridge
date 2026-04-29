@@ -269,6 +269,8 @@ pub enum Message {
     TableResize(iced_longbridge::components::table::ResizeEvent),
     TableHeaderButtonToggle(usize),
     TableHeaderMenuAction(&'static str),
+    TableRowPress(usize),
+    TableNav(iced_longbridge::components::table::NavEvent),
     ListSelected(usize),
     TreeToggle(String),
     TreeSelect(String),
@@ -349,6 +351,7 @@ pub struct State {
     pub table_sort: Option<(&'static str, SortDir)>,
     pub table_resize: iced_longbridge::components::table::ResizeState,
     pub table_header_menu_open: Option<usize>,
+    pub table_row_pressed: Option<usize>,
     pub list_selected: usize,
     pub data_table: crate::components::data_table::DataTable,
     pub tree_nodes: Vec<crate::components::tree::TreeNode>,
@@ -457,6 +460,7 @@ impl Default for State {
             .min_width(60.0)
             .max_width(600.0),
             table_header_menu_open: None,
+            table_row_pressed: None,
             list_selected: 0,
             data_table: build_sample_data_table(),
             tree_nodes: crate::demos::tree_demo::sample_nodes(),
@@ -710,6 +714,34 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
             state.table_header_menu_open = None;
             if action == "reset_sort" {
                 state.table_sort = None;
+            }
+        }
+        Message::TableRowPress(i) => {
+            state.table_row_pressed = Some(i);
+            state.last_action = format!("Table row: {i}");
+        }
+        Message::TableNav(ev) => {
+            use iced_longbridge::components::table::NavEvent;
+            // Demo uses a fixed 8-row dataset and a 4-row "page".
+            let n = crate::demos::table_demo::PEOPLE.len();
+            if n > 0 {
+            let cur = state.table_row_pressed.unwrap_or(0);
+            let next = match ev {
+                NavEvent::Up => cur.saturating_sub(1),
+                NavEvent::Down => (cur + 1).min(n - 1),
+                NavEvent::Home => 0,
+                NavEvent::End => n - 1,
+                NavEvent::PageUp => cur.saturating_sub(4),
+                NavEvent::PageDown => (cur + 4).min(n - 1),
+                NavEvent::Activate => {
+                    state.last_action = format!("Table row activated: {cur}");
+                    cur
+                }
+            };
+            state.table_row_pressed = Some(next);
+            if !matches!(ev, NavEvent::Activate) {
+                state.last_action = format!("Table nav: row {next}");
+            }
             }
         }
         Message::ListSelected(i) => {
