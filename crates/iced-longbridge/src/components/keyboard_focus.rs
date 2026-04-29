@@ -1,11 +1,19 @@
-//! Keyboard-focus wrapper around a rendered table. Click anywhere inside the
-//! table to claim focus; click outside to release it. While focused, nav keys
-//! are translated to [`super::NavEvent`]s and emitted via the caller's
-//! callback. Other keys fall through unchanged.
+//! Generic keyboard-focus wrapper.
 //!
-//! Boilerplate-heavy because there is no generic "focusable container" in
-//! iced 0.14 — every `Widget` trait method other than `update` is a verbatim
-//! delegate to the inner element.
+//! Wrap any [`Element`] with [`wrap`] to make it claim focus on left-click
+//! inside its bounds (and release focus on a click outside). While focused,
+//! the navigation keys ↑/↓/←/→/Home/End/PgUp/PgDn/Enter are intercepted and
+//! translated to [`NavEvent`]s via the caller's callback. Other keys fall
+//! through unchanged.
+//!
+//! The caller owns the focused index / selection state — this widget is
+//! purely a focus-and-key-translation layer. Pair it with state on your end
+//! and reflect the focused item visually however you like (e.g. a tinted
+//! row, a focus ring).
+//!
+//! There is no generic "focusable container" in iced 0.14 — every `Widget`
+//! trait method other than `update` is a verbatim delegate to the inner
+//! element. Hence the boilerplate at the bottom of this file.
 
 use iced::{
     Element, Event, Length, Rectangle, Size, Vector,
@@ -18,14 +26,38 @@ use iced::{
     keyboard,
 };
 
-use super::NavEvent;
+/// Keyboard-navigation event emitted by [`wrap`] when the wrapped element
+/// has focus. The caller decides what each one means — e.g. `Up`/`Down`
+/// move a row cursor in a list, `Left`/`Right` move between tabs,
+/// `PageUp`/`PageDown` advance by ~10 in a list, etc. The widget itself has
+/// no idea what it's wrapping.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NavEvent {
+    Up,
+    Down,
+    Left,
+    Right,
+    Home,
+    End,
+    PageUp,
+    PageDown,
+    /// Enter pressed — typically maps to "activate the focused item".
+    Activate,
+}
 
-/// Wrap a rendered element so it captures keyboard navigation while focused.
-pub(super) fn wrap<'a, Message: Clone + 'a>(
-    inner: Element<'a, Message>,
-    on_nav: Box<dyn Fn(NavEvent) -> Message + 'a>,
-) -> Element<'a, Message> {
-    Element::new(KeyboardCapture { inner, on_nav })
+/// Wrap an element so it captures keyboard navigation while focused.
+pub fn wrap<'a, Message, F>(
+    inner: impl Into<Element<'a, Message>>,
+    on_nav: F,
+) -> Element<'a, Message>
+where
+    Message: Clone + 'a,
+    F: Fn(NavEvent) -> Message + 'a,
+{
+    Element::new(KeyboardCapture {
+        inner: inner.into(),
+        on_nav: Box::new(on_nav),
+    })
 }
 
 fn key_to_nav(key: &keyboard::Key) -> Option<NavEvent> {
@@ -37,6 +69,8 @@ fn key_to_nav(key: &keyboard::Key) -> Option<NavEvent> {
     Some(match named {
         Named::ArrowUp => NavEvent::Up,
         Named::ArrowDown => NavEvent::Down,
+        Named::ArrowLeft => NavEvent::Left,
+        Named::ArrowRight => NavEvent::Right,
         Named::Home => NavEvent::Home,
         Named::End => NavEvent::End,
         Named::PageUp => NavEvent::PageUp,

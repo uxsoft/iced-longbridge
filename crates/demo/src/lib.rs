@@ -272,6 +272,7 @@ pub enum Message {
     TableRowPress(usize),
     TableNav(iced_longbridge::components::table::NavEvent),
     ListSelected(usize),
+    ListNav(iced_longbridge::components::keyboard_focus::NavEvent),
     TreeToggle(String),
     TreeSelect(String),
 
@@ -737,6 +738,7 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
                     state.last_action = format!("Table row activated: {cur}");
                     cur
                 }
+                NavEvent::Left | NavEvent::Right => cur,
             };
             state.table_row_pressed = Some(next);
             if !matches!(ev, NavEvent::Activate) {
@@ -747,6 +749,29 @@ pub fn update(state: &mut State, message: Message) -> Task<Message> {
         Message::ListSelected(i) => {
             state.list_selected = i;
             state.last_action = format!("List: {i}");
+        }
+        Message::ListNav(ev) => {
+            use iced_longbridge::components::keyboard_focus::NavEvent;
+            // SAMPLE list has 6 items; nav stays within that range.
+            let n = crate::demos::list_demo::SAMPLE.len();
+            let cur = if state.list_selected < n { state.list_selected } else { 0 };
+            let next = match ev {
+                NavEvent::Up => cur.saturating_sub(1),
+                NavEvent::Down => (cur + 1).min(n - 1),
+                NavEvent::Home => 0,
+                NavEvent::End => n - 1,
+                NavEvent::PageUp => cur.saturating_sub(3),
+                NavEvent::PageDown => (cur + 3).min(n - 1),
+                NavEvent::Activate => {
+                    state.last_action = format!("List activated: {cur}");
+                    cur
+                }
+                NavEvent::Left | NavEvent::Right => cur,
+            };
+            state.list_selected = next;
+            if !matches!(ev, NavEvent::Activate) {
+                state.last_action = format!("List nav: {next}");
+            }
         }
         Message::TreeToggle(id) => {
             if !state.tree_expanded.remove(&id) {

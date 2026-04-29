@@ -26,6 +26,7 @@ pub mod hover_card;
 pub mod html;
 pub mod icon;
 pub mod input;
+pub mod keyboard_focus;
 pub mod kbd;
 pub mod label;
 pub mod link;

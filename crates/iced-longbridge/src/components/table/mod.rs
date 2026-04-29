@@ -34,15 +34,18 @@
 //! overlay so the drag keeps working even when the cursor wanders off the
 //! handle.
 
-mod keyboard;
 mod render;
 
 use iced::{Element, Length, Point, alignment::Horizontal};
 
 use crate::{
-    components::icon::Icon,
+    components::{icon::Icon, keyboard_focus},
     theme::AppTheme,
 };
+
+/// Re-export of the generic [`crate::components::keyboard_focus::NavEvent`]
+/// so callers can still write `iced_longbridge::components::table::NavEvent`.
+pub use keyboard_focus::NavEvent;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortDir {
@@ -56,22 +59,6 @@ pub enum SortDir {
 pub struct RowStyle {
     pub background: Option<iced::Color>,
     pub text_color: Option<iced::Color>,
-}
-
-/// Keyboard-navigation event emitted by [`Table::navigation`] when the table
-/// has focus. The caller decides what each one means for its row state —
-/// e.g. `PageUp/PageDown` typically advance the cursor by ~10 rows, but the
-/// table itself doesn't know your viewport size.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NavEvent {
-    Up,
-    Down,
-    Home,
-    End,
-    PageUp,
-    PageDown,
-    /// Enter pressed — typically maps to "press the focused row".
-    Activate,
 }
 
 pub struct Column<'a, T, Message> {

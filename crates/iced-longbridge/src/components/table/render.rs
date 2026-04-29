@@ -10,6 +10,7 @@ use crate::{
     components::{
         button::ghost_icon_button,
         icon::{icon_colored, lucide},
+        keyboard_focus,
         popover::popover_aligned,
         tooltip::wrap as tooltip_wrap,
     },
@@ -177,7 +178,7 @@ where
 
     // Wrap in a keyboard-capture widget if navigation is wired.
     match on_nav {
-        Some(on_nav) => super::keyboard::wrap(table_el, on_nav),
+        Some(on_nav) => keyboard_focus::wrap(table_el, on_nav),
         None => table_el,
     }
 }

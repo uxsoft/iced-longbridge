@@ -5,6 +5,7 @@ use crate::{
     components::{
         badge::{badge, BadgeVariant},
         icon::Icon,
+        keyboard_focus,
         list::{list, ListItem},
     },
     demos::common::{section_caption, section_title, vspace},
@@ -61,11 +62,16 @@ pub fn view<'a>(state: &'a State, theme: &AppTheme) -> Element<'a, Message> {
         })
         .collect();
 
+    let nav_list = keyboard_focus::wrap(list(theme, items), Message::ListNav);
+
     column![
         section_title(theme, "Selectable list"),
-        section_caption(theme, "Rows emit on_press; the parent keeps the selection."),
+        section_caption(
+            theme,
+            "Rows emit on_press; the parent keeps the selection. Click the left list to focus it, then ↑/↓/Home/End/PgUp/PgDn move the highlight; Enter activates.",
+        ),
         row![
-            container(list(theme, items)).width(Length::FillPortion(1)),
+            container(nav_list).width(Length::FillPortion(1)),
             container(
                 container(list(theme, scroll_items))
                     .max_height(320)
